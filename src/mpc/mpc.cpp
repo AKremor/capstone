@@ -1,38 +1,61 @@
 #include <math.h>
 #include <src/mpc/mpc.h>
 #include <src/mpc/switching_states.h>
+#include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <xdc/runtime/System.h>
-
-//#include "arm_math.h"
+#include <limits>
 //#include "arm_const_structs.h"
 
 int findOptimalSwitchingIndex(SystemState system_state,
-                              DesiredState desired_state,
-                              const int cell_states[n_levels][n_phases]) {
-  DesiredState predictions[n_levels] = {NULL};
+                              SystemState desired_state,
+                              const PhaseVoltageLevel cell_states[n_levels],
+                              LoadModel load) {
+    // Now find best option, minimisation problem
+    int best_index_found = 0;
+    float best_cost_found = std::numeric_limits<float>::max();
+    // TODO collapse desired state into system state
+    for (int i = 0; i < n_levels; i++) {
+        SystemState prediction =
+            predictSystemState(system_state, cell_states[i], load);
 
-  // Now find best option, minimisation problem
-  int best_index_found = 0;  // TODO
-  float best_cost_found = 100000000;  // TODO
-  // TODO collapse desired state into system state
-  for (int i = 0; i < n_levels; i++) {
-    // TODO Add the model in
-    predictions[i].desired_current_alpha = 0.5 * cell_states[i][0];
-    predictions[i].desired_current_beta = 0.5 * cell_states[i][1];
-    predictions[i].desired_current_zero = 0;
+        float cost = 0;
+        cost += abs(prediction.current_alpha - desired_state.current_alpha);
+        cost += abs(prediction.current_beta - desired_state.current_beta);
+        cost += abs(prediction.current_zero - desired_state.current_zero);
 
-    float cost = abs(predictions[i].desired_current_alpha -
-                   desired_state.desired_current_alpha);
-    cost += abs(predictions[i].desired_current_beta -
-                    desired_state.desired_current_beta);
-    cost += abs(predictions[i].desired_current_zero -
-                    desired_state.desired_current_zero);
-
-    if (cost < best_cost_found) {
-      best_cost_found = cost;
-      best_index_found = i;
+        if (cost < best_cost_found) {
+            best_cost_found = cost;
+            best_index_found = i;
+        }
     }
-  }
 
-  return best_index_found;
+    return best_index_found;
+}
+
+void setGateSignals(PhaseVoltageLevel level_selection) {
+    uint8_t gpio_K = gate_signals[level_selection.a];
+    uint8_t gpio_L = gate_signals[level_selection.b];
+    uint8_t gpio_M = gate_signals[level_selection.c];
+
+    GPIOPinWrite(GPIO_PORTK_BASE, gpio_K, gpio_K);
+    GPIOPinWrite(GPIO_PORTL_BASE, gpio_L, gpio_L);
+    GPIOPinWrite(GPIO_PORTM_BASE, gpio_M, gpio_M);
+}
+
+SystemState predictSystemState(SystemState current_state,
+                               PhaseVoltageLevel voltage_level,
+                               LoadModel load) {
+    // TODO alpha beta transform on voltages
+    SystemState prediction;
+    // TODO replace the 1 with v_alpha
+    prediction.current_alpha =
+        (load.L * current_state.current_alpha + load.Ts * 1) /
+        (load.R * load.Ts + load.L);
+    prediction.current_beta =
+        (load.L * current_state.current_beta + load.Ts * 1) /
+        (load.R * load.Ts + load.L);
+
+    prediction.current_zero = 0;
+
+    return prediction;
 }

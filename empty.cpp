@@ -38,17 +38,11 @@
 /* For usleep() */
 #include <stddef.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
-
+#include <unistd.h>
 
 /* Driver Header files */
 #include <ti/drivers/GPIO.h>
-// #include <ti/drivers/I2C.h>
-// #include <ti/drivers/SDSPI.h>
-// #include <ti/drivers/SPI.h>
-// #include <ti/drivers/UART.h>
-// #include <ti/drivers/Watchdog.h>
 
 /* Board Header file */
 #include "Board.h"
@@ -58,63 +52,53 @@
  */
 extern "C" {
 void *mainThread(void *arg0) {
-  /* 1 second delay */
-  uint32_t time = 1;
+    /* 1 second delay */
+    uint32_t time = 1;
 
-  /* Call driver init functions */
-  GPIO_init();
-  // I2C_init();
-  // SDSPI_init();
-  // SPI_init();
-  // UART_init();
-  // Watchdog_init();
+    /* Call driver init functions */
+    GPIO_init();
 
-  /* Configure the LED pin */
-  GPIO_setConfig(Board_GPIO_LED0, GPIO_CFG_OUT_STD | GPIO_CFG_OUT_LOW);
+    /* Configure Port N pin 1 as output. */
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOK)))
+        ;
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOL)))
+        ;
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOM)))
+        ;
 
-  /* Turn on user LED */
-  //GPIO_write(Board_GPIO_LED0, Board_GPIO_LED_ON);
+    // TODO Probably a better way to handle this. Same with the peripheral
+    // enables above
+    GPIOPinTypeGPIOOutput(
+        GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
+                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+    GPIOPinTypeGPIOOutput(
+        GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
+                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+    GPIOPinTypeGPIOOutput(GPIO_PORTM_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
-  /* Configure Port N pin 1 as output. */
-      SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
-      while(!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPION)));
-      GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_1);
+    SystemState desired_state = {1, 2, 0};
+    SystemState system_state = {0.8, 0.2, 0};
 
+    LoadModel load;
+    load.C = 0;
+    load.R = 50;
+    load.L = 10e-3;
+    for (int i = 0; i < 100000; i++) {
+        // Run the optimiser once
+        int level_index = findOptimalSwitchingIndex(system_state, desired_state,
+                                                    cell_states, load);
+        setGateSignals(cell_states[level_index]);
+        system_state.current_alpha += 0.08;
+        system_state.current_beta += 0.02;
+    }
 
+    // TODO Make sure to force output so no optim
 
-  DesiredState desired_state;
-  desired_state.desired_current_alpha = 1;
-  desired_state.desired_current_beta = 2;
-  desired_state.desired_current_zero = 0;
-  SystemState system_state;
-  system_state.current_alpha = 0.8;
-  system_state.current_beta = 0.2;
-  system_state.current_zero = 0;
-
-  int total_switch = 0;
-  /* Turn on user LED */
-  GPIO_write(Board_GPIO_LED0, Board_GPIO_LED_ON);
-
-  for (int i = 0; i < 100000; i++) {
-    // Run the optimiser once
-     total_switch += findOptimalSwitchingIndex(system_state, desired_state, cell_states);
-
-     for(int j = 0; j < 27; j++)
-    system_state.current_alpha += 0.08;
-    system_state.current_beta += 0.02;
-    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1);
-  }
-
-  if(total_switch > 123){
-      GPIO_toggle(Board_GPIO_LED0);
-  } else {
-      GPIO_toggle(Board_GPIO_LED1);
-  }
-
-
-  while (1) {
-    sleep(time);
-    GPIO_toggle(Board_GPIO_LED0);
-  }
+    while (1) {
+        sleep(time);
+    }
 }
 }

@@ -52,7 +52,7 @@ extern "C" {
 
 /* LEDs on MSP_EXP432E401Y are active high. */
 #define MSP_EXP432E401Y_GPIO_LED_OFF (0)
-#define MSP_EXP432E401Y_GPIO_LED_ON  (1)
+#define MSP_EXP432E401Y_GPIO_LED_ON (1)
 
 /*!
  *  @def    MSP_EXP432E401Y_ADCName
@@ -94,19 +94,28 @@ typedef enum MSP_EXP432E401Y_ADCBuf0ChannelName {
  *  @brief  Enum of LED names on the MSP_EXP432E401Y dev board
  */
 typedef enum MSP_EXP432E401Y_GPIOName {
-    MSP_EXP432E401Y_GPIO_USR_SW1 = 0,
-    MSP_EXP432E401Y_GPIO_USR_SW2,
-    MSP_EXP432E401Y_SPI_MASTER_READY,
-    MSP_EXP432E401Y_SPI_SLAVE_READY,
-    MSP_EXP432E401Y_GPIO_D1,
-    MSP_EXP432E401Y_GPIO_D2,
+    // Phase A, Cell 1, Gates 1 and 4
+    // Cell 1 is the largest voltage with 2 being the next largest etc
+    PHASE_A_C1_G1G4 = 0,
+    PHASE_A_C1_G2G3,
+    PHASE_A_C2_G1G4,
+    PHASE_A_C2_G2G3,
+    PHASE_A_C3_G1G4,
+    PHASE_A_C3_G2G3,
 
-    MSP_EXP432E401Y_SDSPI_CS,
+    PHASE_B_C1_G1G4,
+    PHASE_B_C1_G2G3,
+    PHASE_B_C2_G1G4,
+    PHASE_B_C2_G2G3,
+    PHASE_B_C3_G1G4,
+    PHASE_B_C3_G2G3,
 
-    /* Sharp 96x96 LCD Pins */
-    MSP_EXP432E401Y_LCD_CS,
-    MSP_EXP432E401Y_LCD_POWER,
-    MSP_EXP432E401Y_LCD_ENABLE,
+    PHASE_C_C1_G1G4,
+    PHASE_C_C1_G2G3,
+    PHASE_C_C2_G1G4,
+    PHASE_C_C2_G2G3,
+    PHASE_C_C3_G1G4,
+    PHASE_C_C3_G2G3,
 
     MSP_EXP432E401Y_GPIOCOUNT
 } MSP_EXP432E401Y_GPIOName;
@@ -123,16 +132,6 @@ typedef enum MSP_EXP432E401Y_I2CName {
 } MSP_EXP432E401Y_I2CName;
 
 /*!
- *  @def    MSP_EXP432E401Y_NVSName
- *  @brief  Enum of NVS names on the MSP_EXP432E401Y dev board
- */
-typedef enum MSP_EXP432E401Y_NVSName {
-    MSP_EXP432E401Y_NVSMSP432E40 = 0,
-
-    MSP_EXP432E401Y_NVSCOUNT
-} MSP_EXP432E401Y_NVSName;
-
-/*!
  *  @def    MSP_EXP432E401Y_PWMName
  *  @brief  Enum of PWM names on the MSP_EXP432E401Y dev board
  */
@@ -141,37 +140,6 @@ typedef enum MSP_EXP432E401Y_PWMName {
 
     MSP_EXP432E401Y_PWMCOUNT
 } MSP_EXP432E401Y_PWMName;
-
-/*!
- *  @def    MSP_EXP432E401Y_SDFatFSName
- *  @brief  Enum of SDFatFS names on the MSP_EXP432E401Y dev board
- */
-typedef enum MSP_EXP432E401Y_SDFatFSName {
-    MSP_EXP432E401Y_SDFatFS0 = 0,
-
-    MSP_EXP432E401Y_SDFatFSCOUNT
-} MSP_EXP432E401Y_SDFatFSName;
-
-/*!
- *  @def    MSP_EXP432E401Y_SDName
- *  @brief  Enum of SD names on the MSP_EXP432E401Y dev board
- */
-typedef enum MSP_EXP432E401Y_SDName {
-    MSP_EXP432E401Y_SDSPI0 = 0,
-
-    MSP_EXP432E401Y_SDCOUNT
-} MSP_EXP432E401Y_SDName;
-
-/*!
- *  @def    MSP_EXP432E401Y_SPIName
- *  @brief  Enum of SPI names on the MSP_EXP432E401Y dev board
- */
-typedef enum MSP_EXP432E401Y_SPIName {
-    MSP_EXP432E401Y_SPI2 = 0,
-    MSP_EXP432E401Y_SPI3,
-
-    MSP_EXP432E401Y_SPICOUNT
-} MSP_EXP432E401Y_SPIName;
 
 /*!
  *  @def    MSP_EXP432E401Y_TimerName
@@ -194,16 +162,6 @@ typedef enum MSP_EXP432E401Y_UARTName {
 
     MSP_EXP432E401Y_UARTCOUNT
 } MSP_EXP432E401Y_UARTName;
-
-/*
- *  @def    MSP_EXP432E401Y_WatchdogName
- *  @brief  Enum of Watchdogs on the MSP_EXP432E401Y dev board
- */
-typedef enum MSP_EXP432E401Y_WatchdogName {
-    MSP_EXP432E401Y_WATCHDOG0 = 0,
-
-    MSP_EXP432E401Y_WATCHDOGCOUNT
-} MSP_EXP432E401Y_WatchdogName;
 
 /*!
  *  @brief  Initialize the general board specific settings
