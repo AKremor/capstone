@@ -40,6 +40,7 @@
 #include <stdint.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <unistd.h>
+#include "arm_math.h"
 
 /* Driver Header files */
 #include <ti/drivers/GPIO.h>
@@ -82,14 +83,17 @@ void *mainThread(void *arg0) {
     SystemState desired_state = {1, 2, 0};
     SystemState system_state = {0.8, 0.2, 0};
 
-    LoadModel load;
-    load.C = 0;
-    load.R = 50;
-    load.L = 10e-3;
+    // Loop 1
+
+    // Loop 2
+
+    LoadModel load = {0, 50, 10e-3, 1e-6, 0};
+    load.model_reciprocal_denominator = 1.0 / (load.R * load.Ts + load.L);
+
     for (int i = 0; i < 100000; i++) {
         // Run the optimiser once
-        int level_index = findOptimalSwitchingIndex(system_state, desired_state,
-                                                    cell_states, load);
+        int level_index = findOptimalSwitchingIndex(
+            &system_state, &desired_state, cell_states, &load);
         setGateSignals(cell_states[level_index]);
         system_state.current_alpha += 0.08;
         system_state.current_beta += 0.02;

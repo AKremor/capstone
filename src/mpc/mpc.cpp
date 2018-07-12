@@ -6,10 +6,10 @@
 #include <limits>
 //#include "arm_const_structs.h"
 
-int findOptimalSwitchingIndex(SystemState system_state,
-                              SystemState desired_state,
+int findOptimalSwitchingIndex(SystemState *system_state,
+                              SystemState *desired_state,
                               const PhaseVoltageLevel cell_states[n_levels],
-                              LoadModel load) {
+                              LoadModel *load) {
     // Now find best option, minimisation problem
     int best_index_found = 0;
     float best_cost_found = std::numeric_limits<float>::max();
@@ -19,9 +19,9 @@ int findOptimalSwitchingIndex(SystemState system_state,
             predictSystemState(system_state, cell_states[i], load);
 
         float cost = 0;
-        cost += abs(prediction.current_alpha - desired_state.current_alpha);
-        cost += abs(prediction.current_beta - desired_state.current_beta);
-        cost += abs(prediction.current_zero - desired_state.current_zero);
+        cost += abs(prediction.current_alpha - desired_state->current_alpha);
+        cost += abs(prediction.current_beta - desired_state->current_beta);
+        cost += abs(prediction.current_zero - desired_state->current_zero);
 
         if (cost < best_cost_found) {
             best_cost_found = cost;
@@ -42,18 +42,18 @@ void setGateSignals(PhaseVoltageLevel level_selection) {
     GPIOPinWrite(GPIO_PORTM_BASE, gpio_M, gpio_M);
 }
 
-SystemState predictSystemState(SystemState current_state,
-                               PhaseVoltageLevel voltage_level,
-                               LoadModel load) {
+SystemState predictSystemState(SystemState *current_state,
+                               const PhaseVoltageLevel voltage_level,
+                               LoadModel *load) {
     // TODO alpha beta transform on voltages
     SystemState prediction;
     // TODO replace the 1 with v_alpha
     prediction.current_alpha =
-        (load.L * current_state.current_alpha + load.Ts * 1) /
-        (load.R * load.Ts + load.L);
+        (load->L * current_state->current_alpha + load->Ts * 1) *
+        load->model_reciprocal_denominator;
     prediction.current_beta =
-        (load.L * current_state.current_beta + load.Ts * 1) /
-        (load.R * load.Ts + load.L);
+        (load->L * current_state->current_beta + load->Ts * 1) *
+        load->model_reciprocal_denominator;
 
     prediction.current_zero = 0;
 

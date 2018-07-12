@@ -85,6 +85,10 @@ src/mpc/mpc.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp4
 src/mpc/mpc.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/udma.h
 src/mpc/mpc.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/usb.h
 src/mpc/mpc.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/watchdog.h
+src/mpc/mpc.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/arm_math.h
+src/mpc/mpc.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/core_cm4.h
+src/mpc/mpc.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/string.h
+src/mpc/mpc.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/string.h
 src/mpc/mpc.obj: C:/ti/xdctools_3_50_05_12_core/packages/xdc/runtime/System.h
 src/mpc/mpc.obj: C:/ti/xdctools_3_50_05_12_core/packages/xdc/std.h
 src/mpc/mpc.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/stdarg.h
@@ -247,6 +251,10 @@ C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/ua
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/udma.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/usb.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/watchdog.h: 
+C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/arm_math.h: 
+C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/core_cm4.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/string.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/string.h: 
 C:/ti/xdctools_3_50_05_12_core/packages/xdc/runtime/System.h: 
 C:/ti/xdctools_3_50_05_12_core/packages/xdc/std.h: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/stdarg.h: 

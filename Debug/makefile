@@ -157,7 +157,7 @@ dependents:
 Inverter.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS) C:/Users/Anthony/workspace_v8/tirtos_builds_MSP_EXP432E401Y_release_ccs/Debug/tirtos_builds_MSP_EXP432E401Y_release_ccs.lib
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: ARM Linker'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me -O3 --opt_for_speed=5 --fp_mode=relaxed --advice:power=none --define=__MSP432E401Y__ --define=DeviceFamily_MSP432E -g --diag_warning=225 --diag_warning=255 --diag_wrap=off --display_error_number --gen_func_subsections=on -z -m"Inverter.map" -i"C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source" -i"C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/lib" --diag_wrap=off --display_error_number --warn_sections --xml_link_info="Inverter_linkInfo.xml" --rom_model -o "Inverter.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me -O3 --opt_for_speed=5 --fp_mode=relaxed --advice:power=none --define=__FPU_PRESENT=1 --define=ARM_MATH_CM4 --define=__MSP432E401Y__ --define=DeviceFamily_MSP432E -g --diag_warning=225 --diag_warning=255 --diag_wrap=off --display_error_number --gen_func_subsections=on -z -m"Inverter.map" -i"C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source" -i"C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/lib" --diag_wrap=off --display_error_number --warn_sections --xml_link_info="Inverter_linkInfo.xml" --rom_model -o "Inverter.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 

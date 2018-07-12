@@ -74,6 +74,21 @@ empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/d
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/udma.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/usb.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/watchdog.h
+empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/arm_math.h
+empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/core_cm4.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/string.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/string.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/math.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/math.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/_defs.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/machine/_limits.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/type_traits
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/cstddef
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/limits
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/support/ti/__limit_defs.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/float.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/float.h
+empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/__undef_macros
 empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/stddef.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/posix/ccs/unistd.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/GPIO.h
@@ -154,6 +169,21 @@ C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/ua
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/udma.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/usb.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/devices/msp432e4/driverlib/watchdog.h: 
+C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/arm_math.h: 
+C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/third_party/CMSIS/Include/core_cm4.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/string.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/string.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/math.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/math.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/_defs.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/machine/_limits.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/type_traits: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/cstddef: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/limits: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/support/ti/__limit_defs.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/float.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/float.h: 
+C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/__undef_macros: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/stddef.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/posix/ccs/unistd.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/GPIO.h: 
