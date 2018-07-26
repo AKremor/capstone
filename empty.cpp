@@ -59,15 +59,12 @@ void initSineWaveOutput();
 
 extern "C" {
 
-/* Callback used for toggling the LED. */
-void timerCallback(Timer_Handle myHandle);
+void timerCallback(Timer_Handle handle);
+void chopper_timer_callback(Timer_Handle handle);
 
 void *mainThread(void *arg0) {
-    /* 1 second delay */
-    uint32_t time = 1;
-
-    /* Call driver init functions */
     GPIO_init();
+    Timer_init();
 
     /* Configure Port N pin 1 as output. */
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);
@@ -80,21 +77,9 @@ void *mainThread(void *arg0) {
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOM)))
         ;
 
-    // GPIOPadConfigSet(GPIO_PORTL_BASE, 0xFF, GPIO_STRENGTH_12MA,
-    //                 GPIO_PIN_TYPE_STD);
-    // TODO Probably a better way to handle this. Same with the peripheral
-    // enables above
-    GPIOPinTypeGPIOOutputOD(
-        GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
-                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
     GPIOPinTypeGPIOOutput(
         GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
-    GPIOPinTypeGPIOOutputOD(GPIO_PORTM_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-
-    // initSineWaveOutput();
-
-    Timer_init();
 
     Timer_Handle timer0;
     Timer_Params params;
@@ -117,32 +102,25 @@ void *mainThread(void *arg0) {
             ;
     }
 
-    while (true)
-        ;
+    Timer_Handle timer_chopper;
+    Timer_Params chopper_params;
 
-    SystemState desired_state = {1, 2, 0};
-    SystemState system_state = {0.8, 0.2, 0};
+    Timer_Params_init(&chopper_params);
+    chopper_params.period = 2 * 20000;
+    chopper_params.periodUnits = Timer_PERIOD_HZ;
+    chopper_params.timerMode = Timer_CONTINUOUS_CALLBACK;
+    chopper_params.timerCallback = chopper_timer_callback;
 
-    // Loop 1
+    timer_chopper = Timer_open(Board_TIMER1, &chopper_params);
 
-    // Loop 2
-
-    LoadModel load = {0, 50, 10e-3, 1e-6, 0};
-    load.model_reciprocal_denominator = 1.0 / (load.R * load.Ts + load.L);
-
-    for (int i = 0; i < 100000; i++) {
-        // Run the optimiser once
-        int level_index = findOptimalSwitchingIndex(
-            &system_state, &desired_state, cell_states, &load);
-        setGateSignals(cell_states[level_index]);
-        system_state.current_alpha += 0.008;
-        system_state.current_beta += 0.002;
+    if (timer_chopper == NULL) {
+        while (1)
+            ;
     }
 
-    // TODO Make sure to force output so no optim
-
-    while (1) {
-        sleep(time);
+    if (Timer_start(timer_chopper) == Timer_STATUS_ERROR) {
+        while (1)
+            ;
     }
 }
 
@@ -160,9 +138,14 @@ volatile uint64_t state_counter = 0;
 #define OFF9 0x00
 #define OFF3 0x00
 
-uint8_t states[] = {NEG9 | NEG3, NEG9 | OFF3, NEG9 | POS3,
-                    OFF9 | NEG3, OFF9 | OFF3, OFF9 | POS3,
-                    POS9 | NEG3, POS9 | OFF3, POS9 | POS3};
+uint8_t states[] = {
+    NEG9 | NEG3, NEG9 | OFF3, NEG9 | POS3, OFF9 | NEG3, OFF9 | OFF3,
+    OFF9 | POS3, POS9 | NEG3, POS9 | OFF3, POS9 | POS3,
+
+    POS9 | POS3, POS9 | OFF3, POS9 | NEG3, OFF9 | POS3, OFF9 | OFF3,
+    OFF9 | NEG3, NEG9 | POS3, NEG9 | OFF3, NEG9 | NEG3
+
+};
 
 int findNearestStateIndex(uint64_t state_counter) {
     uint8_t middle_offset = sizeof(states) / 2;
@@ -172,8 +155,16 @@ int findNearestStateIndex(uint64_t state_counter) {
     return level;
 }
 void timerCallback(Timer_Handle myHandle) {
-    int nearest_state_index = findNearestStateIndex(state_counter);
-    GPIOPinWrite(GPIO_PORTL_BASE, 0b1111, states[nearest_state_index]);
+    // int nearest_state_index = findNearestStateIndex(state_counter);
+    GPIOPinWrite(GPIO_PORTL_BASE, 0b1111,
+                 states[state_counter % sizeof(states)]);
     state_counter++;
+}
+
+volatile bool chopper_flag = true;
+void chopper_timer_callback(Timer_Handle handle) {
+    GPIOPinWrite(GPIO_PORTL_BASE, GPIO_PIN_4 | GPIO_PIN_5,
+                 GPIO_PIN_4 << chopper_flag);
+    chopper_flag = !chopper_flag;
 }
 }
