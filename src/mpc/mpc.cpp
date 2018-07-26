@@ -33,9 +33,9 @@ int findOptimalSwitchingIndex(SystemState *system_state,
 }
 
 void setGateSignals(PhaseVoltageLevel level_selection) {
-    uint8_t gpio_K = gate_signals[level_selection.a];
-    uint8_t gpio_L = gate_signals[level_selection.b];
-    uint8_t gpio_M = gate_signals[level_selection.c];
+    uint8_t gpio_K = gate_signals[level_selection.a + n_levels / 2];
+    uint8_t gpio_L = gate_signals[level_selection.b + n_levels / 2];
+    uint8_t gpio_M = gate_signals[level_selection.c + n_levels / 2];
 
     GPIOPinWrite(GPIO_PORTK_BASE, gpio_K, gpio_K);
     GPIOPinWrite(GPIO_PORTL_BASE, gpio_L, gpio_L);

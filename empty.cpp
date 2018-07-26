@@ -42,16 +42,26 @@
 #include <unistd.h>
 #include "arm_math.h"
 
+#include <ti/drivers/Timer.h>
+
 /* Driver Header files */
 #include <ti/drivers/GPIO.h>
 
 /* Board Header file */
+#include <ti/sysbios/knl/Task.h>
 #include "Board.h"
 
 /*
  *  ======== mainThread ========
  */
+
+void initSineWaveOutput();
+
 extern "C" {
+
+/* Callback used for toggling the LED. */
+void timerCallback(Timer_Handle myHandle);
+
 void *mainThread(void *arg0) {
     /* 1 second delay */
     uint32_t time = 1;
@@ -70,15 +80,45 @@ void *mainThread(void *arg0) {
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOM)))
         ;
 
+    // GPIOPadConfigSet(GPIO_PORTL_BASE, 0xFF, GPIO_STRENGTH_12MA,
+    //                 GPIO_PIN_TYPE_STD);
     // TODO Probably a better way to handle this. Same with the peripheral
     // enables above
-    GPIOPinTypeGPIOOutput(
+    GPIOPinTypeGPIOOutputOD(
         GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
     GPIOPinTypeGPIOOutput(
         GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
-    GPIOPinTypeGPIOOutput(GPIO_PORTM_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    GPIOPinTypeGPIOOutputOD(GPIO_PORTM_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    // initSineWaveOutput();
+
+    Timer_init();
+
+    Timer_Handle timer0;
+    Timer_Params params;
+
+    Timer_Params_init(&params);
+    params.period = 9 * 1000;
+    params.periodUnits = Timer_PERIOD_HZ;
+    params.timerMode = Timer_CONTINUOUS_CALLBACK;
+    params.timerCallback = timerCallback;
+
+    timer0 = Timer_open(Board_TIMER0, &params);
+
+    if (timer0 == NULL) {
+        while (1)
+            ;
+    }
+
+    if (Timer_start(timer0) == Timer_STATUS_ERROR) {
+        while (1)
+            ;
+    }
+
+    while (true)
+        ;
 
     SystemState desired_state = {1, 2, 0};
     SystemState system_state = {0.8, 0.2, 0};
@@ -95,8 +135,8 @@ void *mainThread(void *arg0) {
         int level_index = findOptimalSwitchingIndex(
             &system_state, &desired_state, cell_states, &load);
         setGateSignals(cell_states[level_index]);
-        system_state.current_alpha += 0.08;
-        system_state.current_beta += 0.02;
+        system_state.current_alpha += 0.008;
+        system_state.current_beta += 0.002;
     }
 
     // TODO Make sure to force output so no optim
@@ -104,5 +144,36 @@ void *mainThread(void *arg0) {
     while (1) {
         sleep(time);
     }
+}
+
+volatile uint64_t state_counter = 0;
+
+// PL0 9VL POS
+// PL1 9VR NEG
+// PL2 3VL POS
+// PL3 3VR NEG
+
+#define POS9 0x01
+#define NEG9 0x02
+#define POS3 0x04
+#define NEG3 0x08
+#define OFF9 0x00
+#define OFF3 0x00
+
+uint8_t states[] = {NEG9 | NEG3, NEG9 | OFF3, NEG9 | POS3,
+                    OFF9 | NEG3, OFF9 | OFF3, OFF9 | POS3,
+                    POS9 | NEG3, POS9 | OFF3, POS9 | POS3};
+
+int findNearestStateIndex(uint64_t state_counter) {
+    uint8_t middle_offset = sizeof(states) / 2;
+
+    double sine_val = (sizeof(states) / 2) * sin(1.0 * state_counter / 20);
+    int level = floor(sine_val + 0.5) + middle_offset;
+    return level;
+}
+void timerCallback(Timer_Handle myHandle) {
+    int nearest_state_index = findNearestStateIndex(state_counter);
+    GPIOPinWrite(GPIO_PORTL_BASE, 0b1111, states[nearest_state_index]);
+    state_counter++;
 }
 }

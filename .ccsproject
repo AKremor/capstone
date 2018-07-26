@@ -15,4 +15,5 @@
 	<templateProperties value="id=empty_MSP_EXP432E401Y_tirtos_ccs.projectspec.empty_MSP_EXP432E401Y_tirtos_ccs,buildProfile=release,isHybrid=true,"/>
 	<origin value="C:\ti\simplelink_msp432e4_sdk_2_10_00_17\examples\rtos\MSP_EXP432E401Y\drivers\empty\tirtos\ccs\empty_MSP_EXP432E401Y_tirtos_ccs.projectspec"/>
 	<filesToOpen value=""/>
+	<isTargetManual value="false"/>
 </projectOptions>

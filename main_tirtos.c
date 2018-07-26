@@ -48,7 +48,7 @@
 extern void *mainThread(void *arg0);
 
 /* Stack size in bytes */
-#define THREADSTACKSIZE    1024
+#define THREADSTACKSIZE 1024
 
 /*
  * The following (weak) function definition is needed in applications
@@ -59,20 +59,19 @@ __weak void NDK_hookInit(int32_t id) {}
 #elif defined(__GNUC__) && !defined(__ti__)
 void __attribute__((weak)) NDK_hookInit(int32_t id) {}
 #else
-#pragma WEAK (NDK_hookInit)
+#pragma WEAK(NDK_hookInit)
 void NDK_hookInit(int32_t id) {}
 #endif
 
 /*
  *  ======== main ========
  */
-int main(void)
-{
-    pthread_t           thread;
-    pthread_attr_t      attrs;
-    struct sched_param  priParam;
-    int                 retc;
-    int                 detachState;
+int main(void) {
+    pthread_t thread;
+    pthread_attr_t attrs;
+    struct sched_param priParam;
+    int retc;
+    int detachState;
 
     /* Call driver init functions */
     Board_initGeneral();
@@ -85,7 +84,8 @@ int main(void)
     retc = pthread_attr_setdetachstate(&attrs, detachState);
     if (retc != 0) {
         /* pthread_attr_setdetachstate() failed */
-        while (1);
+        while (1)
+            ;
     }
 
     pthread_attr_setschedparam(&attrs, &priParam);
@@ -93,13 +93,15 @@ int main(void)
     retc |= pthread_attr_setstacksize(&attrs, THREADSTACKSIZE);
     if (retc != 0) {
         /* pthread_attr_setstacksize() failed */
-        while (1);
+        while (1)
+            ;
     }
 
     retc = pthread_create(&thread, &attrs, mainThread, NULL);
     if (retc != 0) {
         /* pthread_create() failed */
-        while (1);
+        while (1)
+            ;
     }
 
     BIOS_start();
