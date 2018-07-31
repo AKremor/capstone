@@ -1,59 +1,14 @@
-/*
- * Copyright (c) 2015-2017, Texas Instruments Incorporated
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * *  Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * *  Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * *  Neither the name of Texas Instruments Incorporated nor the names of
- *    its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/*
- *  ======== empty.c ========
- */
-
 #include <src/mpc/mpc.h>
-/* For usleep() */
 #include <stddef.h>
 #include <stdint.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
-#include <unistd.h>
-#include "arm_math.h"
-
-#include <ti/drivers/Timer.h>
-
-/* Driver Header files */
+#include <ti/drivers/ADCBuf.h>
 #include <ti/drivers/GPIO.h>
-
-/* Board Header file */
+#include <ti/drivers/Timer.h>
 #include <ti/sysbios/knl/Task.h>
+#include <unistd.h>
 #include "Board.h"
-
-/*
- *  ======== mainThread ========
- */
+#include "arm_math.h"
 
 void initSineWaveOutput();
 
@@ -61,6 +16,44 @@ extern "C" {
 
 void timerCallback(Timer_Handle handle);
 void chopper_timer_callback(Timer_Handle handle);
+
+#define ADCBUFFERSIZE (5)
+
+uint16_t sampleBufferOne[ADCBUFFERSIZE];
+uint16_t sampleBufferTwo[ADCBUFFERSIZE];
+float voltageBuffer[ADCBUFFERSIZE];
+uint32_t buffersCompletedCounter = 0;
+
+/* This function converts a differential buffer to signed microvolts*/
+int_fast16_t convertAdjustedDifferential(ADCBuf_Handle handle,
+                                         uint32_t adcChannel,
+                                         void *adjustedSampleBuffer,
+                                         float outputDifferentialBuffer[],
+                                         uint_fast16_t sampleCount) {
+    uint32_t i;
+    uint16_t *adjustedRawSampleBuf = (uint16_t *)adjustedSampleBuffer;
+
+    float refVoltage = 3.3f;
+
+    /* Converts the ADC result (14-bit) to a float with respect to refVoltage */
+    for (i = 0; i < sampleCount; i++) {
+        if (adjustedRawSampleBuf[i] == 0x800) {
+            outputDifferentialBuffer[i] = 0;
+        } else {
+            outputDifferentialBuffer[i] =
+                (refVoltage * (adjustedRawSampleBuf[i] - 0x800)) / 0x800;
+        }
+    }
+
+    return ADCBuf_STATUS_SUCCESS;
+}
+
+void adcBufCallback(ADCBuf_Handle handle, ADCBuf_Conversion *conversion,
+                    void *completedADCBuffer, uint32_t completedChannel) {
+    /* Adjust raw adc values and convert them to microvolts */
+    convertAdjustedDifferential(handle, completedChannel, completedADCBuffer,
+                                voltageBuffer, ADCBUFFERSIZE);
+}
 
 void *mainThread(void *arg0) {
     GPIO_init();
@@ -80,6 +73,8 @@ void *mainThread(void *arg0) {
     GPIOPinTypeGPIOOutput(
         GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+
+    GPIOPinTypeGPIOOutput(GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
     Timer_Handle timer0;
     Timer_Params params;
@@ -122,6 +117,41 @@ void *mainThread(void *arg0) {
         while (1)
             ;
     }
+
+    // Configure ADC
+    ADCBuf_Handle adcBuf;
+    ADCBuf_Params adcBufParams;
+    ADCBuf_Conversion continuousConversion;
+    ADCBuf_init();
+
+    /* Set up an ADCBuf peripheral in ADCBuf_RECURRENCE_MODE_CONTINUOUS */
+    ADCBuf_Params_init(&adcBufParams);
+    adcBufParams.callbackFxn = adcBufCallback;
+    adcBufParams.recurrenceMode = ADCBuf_RECURRENCE_MODE_CONTINUOUS;
+    adcBufParams.returnMode = ADCBuf_RETURN_MODE_CALLBACK;
+    adcBufParams.samplingFrequency = 200;
+    adcBuf = ADCBuf_open(Board_ADCBUF0, &adcBufParams);
+
+    /* Configure the conversion struct */
+    continuousConversion.arg = NULL;
+    continuousConversion.adcChannel = Board_ADCBUF0CHANNEL3;
+    continuousConversion.sampleBuffer = sampleBufferOne;
+    continuousConversion.sampleBufferTwo = sampleBufferTwo;
+    continuousConversion.samplesRequestedCount = ADCBUFFERSIZE;
+
+    if (!adcBuf) {
+        /* AdcBuf did not open correctly. */
+        while (1)
+            ;
+    }
+
+    /* Start converting. */
+    // if (ADCBuf_convert(adcBuf, &continuousConversion, 1) !=
+    //    ADCBuf_STATUS_SUCCESS) {
+    //    /* Did not start conversion process correctly. */
+    //    while (1)
+    //        ;
+    //}
 }
 
 volatile uint64_t state_counter = 0;
@@ -163,8 +193,8 @@ void timerCallback(Timer_Handle myHandle) {
 
 volatile bool chopper_flag = true;
 void chopper_timer_callback(Timer_Handle handle) {
-    GPIOPinWrite(GPIO_PORTL_BASE, GPIO_PIN_4 | GPIO_PIN_5,
-                 GPIO_PIN_4 << chopper_flag);
+    GPIOPinWrite(GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1,
+                 GPIO_PIN_0 << chopper_flag);
     chopper_flag = !chopper_flag;
 }
 }

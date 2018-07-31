@@ -90,9 +90,9 @@ empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/float
 empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/float.h
 empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/__undef_macros
 empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/stddef.h
-empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/posix/ccs/unistd.h
-empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/Timer.h
+empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/ADCBuf.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/GPIO.h
+empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/Timer.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/knl/Task.h
 empty.obj: C:/ti/xdctools_3_50_05_12_core/packages/xdc/std.h
 empty.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/stdarg.h
@@ -217,6 +217,7 @@ empty.obj: C:/ti/xdctools_3_50_05_12_core/packages/xdc/runtime/Types.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/interfaces/ITaskSupport.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/knl/Task__epilogue.h
 empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/knl/package/Task_SupportProxy.h
+empty.obj: C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/posix/ccs/unistd.h
 empty.obj: ../Board.h
 empty.obj: ../MSP_EXP432E401Y.h
 
@@ -310,9 +311,9 @@ C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/float.h:
 C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/float.h: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/__undef_macros: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/libcxx/stddef.h: 
-C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/posix/ccs/unistd.h: 
-C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/Timer.h: 
+C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/ADCBuf.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/GPIO.h: 
+C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/drivers/Timer.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/knl/Task.h: 
 C:/ti/xdctools_3_50_05_12_core/packages/xdc/std.h: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.2.LTS/include/stdarg.h: 
@@ -437,5 +438,6 @@ C:/ti/xdctools_3_50_05_12_core/packages/xdc/runtime/Types.h:
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/interfaces/ITaskSupport.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/knl/Task__epilogue.h: 
 C:/ti/simplelink_msp432e4_sdk_2_10_00_17/kernel/tirtos/packages/ti/sysbios/knl/package/Task_SupportProxy.h: 
+C:/ti/simplelink_msp432e4_sdk_2_10_00_17/source/ti/posix/ccs/unistd.h: 
 ../Board.h: 
 ../MSP_EXP432E401Y.h: 

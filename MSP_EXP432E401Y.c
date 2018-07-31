@@ -97,8 +97,8 @@ ADCBufMSP432E4_Channels
     adcBuf0MSP432E4Channels[MSP_EXP432E401Y_ADCBUF0CHANNELCOUNT] = {
         {.adcPin = ADCBufMSP432E4_PE_3_A0,
          .adcSequence = ADCBufMSP432E4_Seq_0,
-         .adcInputMode = ADCBufMSP432E4_SINGLE_ENDED,
-         .adcDifferentialPin = ADCBufMSP432E4_PIN_NONE,
+         .adcInputMode = ADCBufMSP432E4_DIFFERENTIAL,
+         .adcDifferentialPin = ADCBufMSP432E4_PE_2_A1,
          .adcInternalSource = ADCBufMSP432E4_INTERNAL_SOURCE_MODE_OFF,
          .refVoltage = 3300000},
         {.adcPin = ADCBufMSP432E4_PE_2_A1,
@@ -113,10 +113,11 @@ ADCBufMSP432E4_Channels
          .adcDifferentialPin = ADCBufMSP432E4_PIN_NONE,
          .adcInternalSource = ADCBufMSP432E4_TEMPERATURE_MODE,
          .refVoltage = 3300000},
+
         {.adcPin = ADCBufMSP432E4_PE_3_A0,
          .adcSequence = ADCBufMSP432E4_Seq_0,
-         .adcInputMode = ADCBufMSP432E4_DIFFERENTIAL,
-         .adcDifferentialPin = ADCBufMSP432E4_PE_2_A1,
+         .adcInputMode = ADCBufMSP432E4_SINGLE_ENDED,
+         .adcDifferentialPin = ADCBufMSP432E4_PIN_NONE,
          .adcInternalSource = ADCBufMSP432E4_INTERNAL_SOURCE_MODE_OFF,
          .refVoltage = 3300000},
         {.adcPin = ADCBufMSP432E4_PE_2_A1,
@@ -149,7 +150,7 @@ const ADCBufMSP432E4_HWAttrsV1
         .modulePhase = ADCBufMSP432E4_Phase_Delay_0,
         .refSource = ADCBufMSP432E4_VREF_INTERNAL,
         .useDMA = 1,
-        .adcTimerSource = TIMER1_BASE,
+        .adcTimerSource = TIMER3_BASE,
     }};
 
 const ADCBuf_Config ADCBuf_config[MSP_EXP432E401Y_ADCBUFCOUNT] = {
