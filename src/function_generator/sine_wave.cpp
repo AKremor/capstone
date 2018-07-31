@@ -13,7 +13,7 @@ void updatePwmValue(Timer_Handle timer);
 PWM_Handle pwm1;
 
 void initSineWaveOutput() {
-    pwm1 = NULL;
+    /*pwm1 = NULL;
     PWM_Params pwm_params;
 
     PWM_init();
@@ -24,6 +24,7 @@ void initSineWaveOutput() {
     pwm_params.periodUnits = PWM_PERIOD_COUNTS;
     pwm_params.periodValue = 255;
     pwm1 = PWM_open(Board_PWM0, &pwm_params);
+    */
     if (pwm1 == NULL) {
         /* Board_PWM0 did not open */
         while (1)
@@ -64,6 +65,4 @@ uint8_t sine_table_index = 0;
 void updatePwmValue(Timer_Handle timer) {
     PWM_setDuty(pwm1, sine_table[sine_table_index % 32]);
     sine_table_index++;
-
-
 }
