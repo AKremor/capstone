@@ -1,8 +1,8 @@
+#include <src/hal/Board.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <ti/drivers/PWM.h>
 #include <ti/drivers/Timer.h>
-#include "Board.h"
 
 const uint8_t sine_table[] = {255, 254, 246, 234, 219, 199, 177, 153,
                               128, 103, 79,  57,  37,  22,  10,  2,

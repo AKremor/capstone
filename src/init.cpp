@@ -1,4 +1,4 @@
-#include <Board.h>
+#include <src/hal/Board.h>
 #include <src/chopper/chopper.h>
 #include <src/system_config.h>
 #include <stddef.h>
@@ -6,15 +6,13 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
 
-extern "C" {
+//extern "C" {
 
 void timerCallback(Timer_Handle handle);
 
 void *mainThread(void *arg0) {
     start_chopper();
 
-    while (true)
-        ;
     Timer_init();
 
     /* Configure Port N pin 1 as output. */
@@ -73,5 +71,5 @@ void timerCallback(Timer_Handle myHandle) {
     GPIOPinWrite(GPIO_PORTL_BASE, 0b1111,
                  states[state_counter % sizeof(states)]);
     state_counter++;
-}
+//}
 }
