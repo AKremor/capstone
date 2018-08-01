@@ -226,7 +226,7 @@ void MSP_EXP432E401Y_initGeneral(void) {
  */
 #include <ti/drivers/power/PowerMSP432E4.h>
 const PowerMSP432E4_Config PowerMSP432E4_config = {
-    .policyFxn = &PowerMSP432E4_sleepPolicy, .enablePolicy = true};
+    .policyFxn = &PowerMSP432E4_sleepPolicy, .enablePolicy = false};
 
 /*
  *  =============================== PWM ===============================
