@@ -1,6 +1,6 @@
 close all;
 clear all;
-n_levels_per_phase = 81;
+n_levels_per_phase = 9;
 phase_upper = floor(n_levels_per_phase / 2);
 phase_lower = -1 * phase_upper;
 
@@ -42,7 +42,7 @@ plot(zeros(1, length(-1*graph_magnitude:graph_magnitude)), -1*graph_magnitude:gr
 
 % Plot a vector for a bit
 magnitude = 3;
-theta = linspace(0,4*pi,1000);	     
+theta = linspace(0,2*pi,1000);	     
 x= x_scaling_factor * magnitude * cos(theta); 
 y= y_scaling_factor * magnitude * sin(theta); 
 hbead = plot(x(1), y(1), '*', 'markersize',5);  % draw the bead at the initial 
@@ -58,12 +58,14 @@ node_3_bead = plot(node_3(1), node_3(2), 'k*', 'markersize',5);
 for k=1:length(theta)		% cycle through all positions
     set(hbead,'xdata',x(k),'ydata', y(k))
     
-    
     node_1(2) = round(y(k));
-    node_1(1) = round(x(k)) + sign(node_1(2)) * 0.5 * mod(node_1(2), 2);
+    node_1(1) = round(x(k)) + sign(x(k)) * 0.5 * mod(node_1(2), 2);
 
+    node_2(2) = round(y(k));
+    node_2(1) = round(x(k)) + sign(x(k))*mod(node_1(2), 2);
+    
     set(node_1_bead ,'xdata', node_1(1),'ydata', node_1(2))
-    %set(node_2_bead ,'xdata', node_2(1),'ydata', node_2(2))
+    set(node_2_bead ,'xdata', node_2(1),'ydata', node_2(2))
     %set(node_3_bead ,'xdata', node_3(1),'ydata', node_3(2))
     set(ref_vector,'xdata',[0 x(k)],'ydata', [0 y(k)])
     drawnow

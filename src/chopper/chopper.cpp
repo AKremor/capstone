@@ -27,9 +27,9 @@ void start_chopper() {
     MAP_PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0, chopper_period);
 
     // Duty cycle set as a period of counts
-    MAP_PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,
+    PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,
                          MAP_PWMGenPeriodGet(chopper_pwm_base, PWM_GEN_0) / 2);
-    MAP_PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_1,
+    PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_1,
                          MAP_PWMGenPeriodGet(chopper_pwm_base, PWM_GEN_0) / 2);
 
     // Deadbanding also handles the complementary output
