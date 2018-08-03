@@ -20,6 +20,6 @@ static const uint16_t chopper_period = 12000;
 static const uint16_t chopper_rising_dead_band_width = 0;
 static const uint16_t chopper_falling_dead_band_width = 0;
 
-static constexpr uint16_t svm_frequency_hz = 100;
+static constexpr uint16_t svm_frequency_hz = 1;
 
 #endif /* SRC_SYSTEM_CONFIG_H_ */

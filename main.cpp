@@ -7,7 +7,7 @@
 extern void *mainThread(void *arg0);
 
 /* Stack size in bytes */
-#define THREADSTACKSIZE 1024
+#define THREADSTACKSIZE 5024
 
 // TI-RTOS expects to find a definition at link time. We don't use networking
 // functionality therefore give it an empty definition.
