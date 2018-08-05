@@ -11,7 +11,7 @@
 
 void applyPortSetting(uint32_t ui32Port);
 void setPinsBuffered(uint32_t ui32Port, uint8_t ui8Pins, uint8_t ui8Val);
-void timerCallback(Timer_Handle handle);
+void svm_timer_callback(Timer_Handle handle);
 void stair_case_timer_callback(Timer_Handle handle);
 
 volatile uint64_t state_counter = 0;
@@ -87,10 +87,11 @@ void *mainThread(void *arg0) {
     Timer_Params params;
 
     Timer_Params_init(&params);
-    params.period = sizeof(states) * svm_frequency_hz;
+    params.period = svm_frequency_hz;
     params.periodUnits = Timer_PERIOD_HZ;
     params.timerMode = Timer_CONTINUOUS_CALLBACK;
-    params.timerCallback = stair_case_timer_callback;
+    // params.timerCallback = stair_case_timer_callback;
+    params.timerCallback = svm_timer_callback;
 
     timer0 = Timer_open(Board_TIMER0, &params);
 
@@ -174,7 +175,19 @@ void svm_timer_callback(Timer_Handle myHandle) {
     // Now we need to find an available voltage state.
     // This is a very rudimentary implementation
 
-    int32_t k = 4;
+    int32_t k = 0;
+    bool constraints_satisfied = false;
+    int32_t g = nearest_1.g;
+    int32_t h = nearest_1.h;
+    int32_t n = 9;
+    while (!constraints_satisfied) {
+        if (k >= 0 && k - g >= 0 && k - g - h >= 0 && k <= n - 1 &&
+            k - g <= n - 1 && k - g - h <= n - 1) {
+            constraints_satisfied = true;
+            break;
+        }
+        k++;
+    }
 
     int32_t a_phase = k;
     int32_t b_phase = k - nearest_1.g;
