@@ -28,9 +28,9 @@ abc_quantity SineWave::getValueAbc(float32_t time) {
     // TODO(akremor): What will happen when the time value overflows?
 
     // TODO(akremor): Why am I defeated by arm_sin_f32
-    float32_t a = magnitude * sinf(2 * PI * frequency_hz * time);
-    float32_t b = magnitude * sinf(2 * PI * frequency_hz * time - 2 * PI / 3);
-    float32_t c = magnitude * sinf(2 * PI * frequency_hz * time + 2 * PI / 3);
+    float32_t a = time / 10000 * magnitude * sinf(2 * PI * frequency_hz * time);
+    float32_t b = time / 10000 * magnitude * sinf(2 * PI * frequency_hz * time - 2 * PI / 3);
+    float32_t c = time / 10000 * magnitude * sinf(2 * PI * frequency_hz * time + 2 * PI / 3);
 
     // Pack into struct
     abc_quantity value = {a, b, c};
