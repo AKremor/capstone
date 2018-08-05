@@ -61,7 +61,7 @@ Timer_Handle timer1;
 
 void *mainThread(void *arg0) {
     start_chopper();
-    fp = fopen("svm.csv", "w");
+    //fp = fopen("svm.csv", "w");
 
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOL)))
@@ -237,7 +237,7 @@ void *mainThread(void *arg0) {
         applyPortSetting(GPIO_PORTC_BASE);
         applyPortSetting(GPIO_PORTL_BASE);
         applyPortSetting(GPIO_PORTK_BASE);
-        fprintf(fp, "%d,%d,%d\n", a_phase, b_phase, c_phase);
+        //fprintf(fp, "%d,%d,%d\n", a_phase, b_phase, c_phase);
         // fclose(fp);
         state_counter++;
     }

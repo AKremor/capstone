@@ -15,10 +15,14 @@ static const uint32_t chopper_gpio_pin_ac_neg = GPIO_PIN_1;
 // desired frequency, and SysClk is the system clock frequency. Note that
 // the maximum period you can set is 2^16 - 1.
 // Configure for 20kHz on a 120MHz base timer
-static const uint16_t chopper_period = 12000;
+static const uint16_t chopper_period = 6000;
 
-static const uint16_t chopper_rising_dead_band_width = 1000;
-static const uint16_t chopper_falling_dead_band_width = 1000;
+static const uint16_t chopper_rising_dead_band_width = 672;
+static const uint16_t chopper_falling_dead_band_width = 672;
+
+// 12000, 1000, 1000 for 10kHz
+// 6000, 672, 672 for 20kHz
+// 3000, 1000, 1000 for 40kHz
 
 static constexpr uint16_t svm_frequency_hz = 1;
 
