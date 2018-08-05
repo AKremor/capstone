@@ -17,8 +17,8 @@ static const uint32_t chopper_gpio_pin_ac_neg = GPIO_PIN_1;
 // Configure for 20kHz on a 120MHz base timer
 static const uint16_t chopper_period = 12000;
 
-static const uint16_t chopper_rising_dead_band_width = 0;
-static const uint16_t chopper_falling_dead_band_width = 0;
+static const uint16_t chopper_rising_dead_band_width = 1000;
+static const uint16_t chopper_falling_dead_band_width = 1000;
 
 static constexpr uint16_t svm_frequency_hz = 1;
 

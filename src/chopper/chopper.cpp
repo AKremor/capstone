@@ -32,6 +32,8 @@ void start_chopper() {
     PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_1,
                      MAP_PWMGenPeriodGet(chopper_pwm_base, PWM_GEN_0) / 2);
 
+    PWMOutputInvert(chopper_pwm_base, PWM_OUT_0_BIT | PWM_OUT_1_BIT, false);
+
     // Deadbanding also handles the complementary output
     // With the deadband width set to 0 we have standard complementary outputs
     MAP_PWMDeadBandEnable(chopper_pwm_base, PWM_GEN_0,
