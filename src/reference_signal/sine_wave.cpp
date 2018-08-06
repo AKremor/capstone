@@ -23,7 +23,7 @@ ab0_coord SineWave::getValue(float32_t time) {
 
 abc_quantity SineWave::getValueAbc(float32_t time) {
     float32_t magnitude = 4;      // TODO(akremor): Extract
-    float32_t frequency_hz = 20;  // TODO(akremor): Extract
+    float32_t frequency_hz = 2;  // TODO(akremor): Extract
 
     // TODO(akremor): What will happen when the time value overflows?
 

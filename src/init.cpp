@@ -103,6 +103,8 @@ void *mainThread(void *arg0) {
 
     Timer_Params_init(&params1);
     params1.timerMode = Timer_FREE_RUNNING;
+    params.period = 2 ^ 32 - 1;
+    params.periodUnits = Timer_PERIOD_COUNTS;
 
     timer1 = Timer_open(Board_TIMER1, &params1);
 

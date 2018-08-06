@@ -259,13 +259,13 @@ const uint_least8_t PWM_count = MSP_EXP432E401Y_PWMCOUNT;
 TimerMSP432E4_Object timerMSP432E4Objects[MSP_EXP432E401Y_TIMERCOUNT];
 
 const TimerMSP432E4_HWAttrs timerMSP432E4HWAttrs[MSP_EXP432E401Y_TIMERCOUNT] = {
-    {.baseAddress = TIMER2_BASE,
-     .subTimer = TimerMSP432E4_timer32,
-     .intNum = INT_TIMER2A,
-     .intPriority = ~0},
     {.baseAddress = TIMER1_BASE,
      .subTimer = TimerMSP432E4_timer16A,
      .intNum = INT_TIMER1A,
+     .intPriority = ~0},
+    {.baseAddress = TIMER2_BASE,
+     .subTimer = TimerMSP432E4_timer32,
+     .intNum = INT_TIMER2A,
      .intPriority = ~0},
     {.baseAddress = TIMER1_BASE,
      .subTimer = TimerMSP432E4_timer16B,
