@@ -23,8 +23,10 @@ void start_chopper() {
     /* Configure the PWM0 to count up/down without synchronization. */
     MAP_PWMGenConfigure(chopper_pwm_base, PWM_GEN_0,
                         PWM_GEN_MODE_UP_DOWN | PWM_GEN_MODE_NO_SYNC);
-
-    MAP_PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0, chopper_period);
+    // N = (1 / f) * SysClk.  Where N is the function parameter, f is the
+    // desired frequency, and SysClk is the system clock frequency. Note that
+    // the maximum period you can set is 2^16 - 1.
+    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0, 1.0 * system_clock_hz / chopper_hz);
 
     // Duty cycle set as a period of counts
     PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,
@@ -36,9 +38,11 @@ void start_chopper() {
 
     // Deadbanding also handles the complementary output
     // With the deadband width set to 0 we have standard complementary outputs
-    MAP_PWMDeadBandEnable(chopper_pwm_base, PWM_GEN_0,
-                          chopper_rising_dead_band_width,
-                          chopper_falling_dead_band_width);
+    // Configured as clock ticks so need to convert from a time duration
+    MAP_PWMDeadBandEnable(
+        chopper_pwm_base, PWM_GEN_0,
+        chopper_rising_dead_band_ns * 10e9 * system_clock_hz,
+        chopper_falling_dead_band_ns * 10e9 * system_clock_hz);
 
     /* Enable the PWM0 Bit 0 (PF0) and Bit 1 (PF1) output signals. */
     MAP_PWMOutputState(chopper_pwm_base, PWM_OUT_0_BIT | PWM_OUT_1_BIT, true);
