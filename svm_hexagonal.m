@@ -10,15 +10,24 @@ transform = 1/(3*Vdc) * [
     1 1 1];
 
 % Plot a vector for a bit
-magnitude = 3;
-theta = linspace(0,8*pi,1000);	     
-a = magnitude * sin(theta); 
-b = magnitude * sin(theta - 2*pi/3); 
-c = magnitude * sin(theta + 2*pi/3); 
+magnitude = 3 * 0.866;
+time = linspace(0,1,10000);	   
+frequency_hz = 2;
+PI = 3.14;
+a = magnitude * cos(2 * PI * frequency_hz * time); 
+b = magnitude * cos(2 * PI * frequency_hz * time - 2*pi/3); 
+c = magnitude * cos(2 * PI * frequency_hz * time + 2*pi/3); 
 
 vref = transform * [a;b;c];
 
-for k=1:length(theta)		% cycle through all positions
+sel_a = [];
+sel_b = [];
+sel_c = [];
+
+sel_g = [];
+sel_h = [];
+
+for k=1:length(time)		% cycle through all positions
     %set(node_1_vector,'xdata',[node_1(1) x(k)],'ydata', [node_1(2) y(k)])
     % but [g h]
     % My format is [x y]
@@ -35,7 +44,12 @@ for k=1:length(theta)		% cycle through all positions
     else
         node_3 = Vll;
     end
+    
+    sel_g = [sel_g node_1(1)];
+    sel_h = [sel_h node_1(2)];
 end
 
 
 
+
+ %value.a, value.b, value.c, a_phase, b_phase, c_phase, ab, bc, ca

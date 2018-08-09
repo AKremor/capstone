@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
+#include <unistd.h>
 #include <xdc/runtime/System.h>
 
 void applyPortSetting(uint32_t ui32Port);
@@ -56,7 +57,7 @@ uint8_t svm_phase_levels[] = {NEG9 | NEG3, NEG9 | OFF3, NEG9 | POS3,
                               POS9 | NEG3, POS9 | OFF3, POS9 | POS3};
 
 Timer_Handle timer1;
-
+FILE *fp;
 void *mainThread(void *arg0) {
     start_chopper();
 
@@ -90,7 +91,7 @@ void *mainThread(void *arg0) {
     params.period = svm_frequency_hz;
     params.periodUnits = Timer_PERIOD_HZ;
     params.timerMode = Timer_CONTINUOUS_CALLBACK;
-    // params.timerCallback = stair_case_timer_callback;
+    params.timerCallback = stair_case_timer_callback;
     params.timerCallback = svm_timer_callback;
 
     timer0 = Timer_open(Board_TIMER0, &params);
@@ -146,14 +147,9 @@ void stair_case_timer_callback(Timer_Handle myHandle) {
     state_counter++;
 }
 
-void svm_timer_callback(Timer_Handle myHandle) {
-    float32_t Vdc = 3;
-    float32_t time = Timer_getCount(timer1);
-    // TODO(akremor): Substitute time in here
+void svm_timer_callback(Timer_Handle handle) {
+    float32_t Vdc = 1;
     abc_quantity value = SineWave::getValueAbc(state_counter);
-
-    // TODO(akremor): Need to ensure the output magnitude is scaled
-    // appropriately
 
     gh_quantity hex_value;
     hex_value.g = 1 / (3 * Vdc) * (2 * value.a - value.b - value.c);
@@ -189,6 +185,10 @@ void svm_timer_callback(Timer_Handle myHandle) {
             break;
         }
         k++;
+
+        if (k > n + 1) {
+            break;
+        }
     }
 
     int32_t a_phase = k;
