@@ -52,9 +52,7 @@ uint8_t states[] = {
 
 };
 
-uint8_t svm_phase_levels[] = {NEG9 | NEG3, NEG9 | OFF3, NEG9 | POS3,
-                              OFF9 | NEG3, OFF9 | OFF3, OFF9 | POS3,
-                              POS9 | NEG3, POS9 | OFF3, POS9 | POS3};
+uint8_t svm_phase_levels[] = {NEG3, OFF3, POS3};
 
 Timer_Handle timer1;
 FILE *fp;
@@ -184,11 +182,10 @@ void svm_timer_callback(Timer_Handle handle) {
             constraints_satisfied = true;
             break;
         }
-        k++;
-
-        if (k > n + 1) {
+        if (k >= n - 1) {
             break;
         }
+        k++;
     }
 
     int32_t a_phase = k;
