@@ -102,7 +102,8 @@ void setPinsBuffered(uint32_t ui32Port, uint8_t ui8Pins, uint8_t ui8Val) {
     // Some freaky memory shifting to resolve the base into a 0-indexed sequence
     // GPIO_PORTA_BASE                 ((uint32_t)0x40058000)
 
-    uint8_t port_buffer_index = (ui32Port >> 3) - 88;
+    uint8_t port_buffer_index = ui32Port;
+    //(ui32Port >> 3) - 88;
 
     if (ui8Val) {
         port_buffer[port_buffer_index] |= ui8Pins;
@@ -112,17 +113,26 @@ void setPinsBuffered(uint32_t ui32Port, uint8_t ui8Pins, uint8_t ui8Val) {
 }
 
 void applyPortSetting(uint32_t ui32Port) {
-    uint8_t port_buffer_index = (ui32Port >> 3) - 88;
-    GPIOPinWrite(ui32Port, 0xFF, port_buffer[port_buffer_index]);
+    // uint8_t port_buffer_index = (ui32Port >> 3) - 88;
+
+    if (ui32Port == 1) {
+        GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, port_buffer[0]);
+    }
+    if (ui32Port == 2) {
+        GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, port_buffer[1]);
+    }
+    if (ui32Port == 3) {
+        GPIOPinWrite(GPIO_PORTC_BASE, 0xFF, port_buffer[2]);
+    }
 }
 
 void stair_case_timer_callback(Timer_Handle myHandle) {
-    //setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
-    //setPinsBuffered(GPIO_PORTL_BASE, states[state_counter % sizeof(states)],
+    // setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
+    // setPinsBuffered(GPIO_PORTL_BASE, states[state_counter % sizeof(states)],
     //                true);
-   // applyPortSetting(GPIO_PORTL_BASE);
+    // applyPortSetting(GPIO_PORTL_BASE);
 
-    //state_counter++;
+    // state_counter++;
 }
 
 void svm_timer_callback(Timer_Handle handle) {
@@ -176,20 +186,30 @@ void svm_timer_callback(Timer_Handle handle) {
     int32_t bc = b_phase - c_phase;
     int32_t ca = c_phase - a_phase;
 
-    setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
-    setPinsBuffered(GPIO_PORTK_BASE, 0xFF, false);
-    setPinsBuffered(GPIO_PORTC_BASE, 0xFF, false);
+#define PORTL 1  // ph a
+#define PORTK 2  // b
+#define PORTC 3  // c
 
-    setPinsBuffered(GPIO_PORTL_BASE,
-                    svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET, true);
-    setPinsBuffered(GPIO_PORTK_BASE,
-                    svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET, true);
-    setPinsBuffered(GPIO_PORTC_BASE,
-                    svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET, true);
+    setPinsBuffered(PORTL, 0xFF, false);
+    setPinsBuffered(PORTK, 0xFF, false);
+    setPinsBuffered(PORTC, 0xFF, false);
 
-    applyPortSetting(GPIO_PORTC_BASE);
-    applyPortSetting(GPIO_PORTL_BASE);
-    applyPortSetting(GPIO_PORTK_BASE);
+    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF,
+                 svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET);
+    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
+                 svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET);
+    GPIOPinWrite(GPIO_PORTC_BASE, 0xFF,
+                 svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET);
+    /*setPinsBuffered(PORTL, svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET,
+                    true);
+    setPinsBuffered(PORTK, svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET,
+                    true);
+    setPinsBuffered(PORTC, svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET,
+                    true);
+    applyPortSetting(PORTC);
+    applyPortSetting(PORTL);
+    applyPortSetting(PORTK);
+    */
 
     state_counter++;
 }
