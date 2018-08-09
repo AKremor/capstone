@@ -17,22 +17,12 @@ void stair_case_timer_callback(Timer_Handle handle);
 volatile uint64_t state_counter = 0;
 
 // A phase - L
-// B phase - K
-// C phase - C
+// B phase - K Up
+// C phase - K Low
 
-// Generic pin indexing arrangement
-#define POS9 0x01
-#define NEG9 0x02
-#define POS3 0x04
-#define NEG3 0x08
-#define OFF9 0x00
-#define OFF3 0x00
-
-#define A_PHASE_PIN_OFFSET 0  // Left shift value
-#define B_PHASE_PIN_OFFSET 4  // Left shift value
-#define C_PHASE_PIN_OFFSET 2  // Left shift value
-
-uint8_t svm_phase_levels[] = {NEG3, OFF3, POS3};
+uint8_t svm_phase_levels_a[] = {0x04, 0x00, 0x02};
+uint8_t svm_phase_levels_b[] = {128, 0x00, 64};
+uint8_t svm_phase_levels_c[] = {32, 0x00, 16};
 
 Timer_Handle timer1;
 FILE *fp;
@@ -182,33 +172,9 @@ void svm_timer_callback(Timer_Handle handle) {
     int32_t b_phase = k - nearest_1.g;
     int32_t c_phase = k - nearest_1.g - nearest_1.h;
 
-    int32_t ab = a_phase - b_phase;
-    int32_t bc = b_phase - c_phase;
-    int32_t ca = c_phase - a_phase;
-
-#define PORTL 1  // ph a
-#define PORTK 2  // b
-#define PORTC 3  // c
-
-    setPinsBuffered(PORTL, 0xFF, false);
-    setPinsBuffered(PORTK, 0xFF, false);
-    setPinsBuffered(PORTC, 0xFF, false);
-
-    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF,
-                 svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET);
+    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[a_phase]);
     GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
-                 svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET |
-                     svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET);
-    /*setPinsBuffered(PORTL, svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET,
-                    true);
-    setPinsBuffered(PORTK, svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET,
-                    true);
-    setPinsBuffered(PORTC, svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET,
-                    true);
-    applyPortSetting(PORTC);
-    applyPortSetting(PORTL);
-    applyPortSetting(PORTK);
-    */
+                 svm_phase_levels_b[b_phase] | svm_phase_levels_c[c_phase]);
 
     state_counter++;
 }
