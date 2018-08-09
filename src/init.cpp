@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
-#include <unistd.h>
 #include <xdc/runtime/System.h>
 
 void applyPortSetting(uint32_t ui32Port);
@@ -33,29 +32,11 @@ volatile uint64_t state_counter = 0;
 #define B_PHASE_PIN_OFFSET 4  // Left shift value
 #define C_PHASE_PIN_OFFSET 4  // Left shift value
 
-// Port L
-#define A_POS9 0x01
-#define A_NEG9 0x02
-#define A_POS3 0x04
-#define A_NEG3 0x08
-#define A_OFF9 0x00
-#define A_OFF3 0x00
-
-uint8_t states[] = {
-    A_NEG9 | A_NEG3, A_NEG9 | A_OFF3, A_NEG9 | A_POS3, A_OFF9 | A_NEG3,
-    A_OFF9 | A_OFF3, A_OFF9 | A_POS3, A_POS9 | A_NEG3, A_POS9 | A_OFF3,
-    A_POS9 | A_POS3,
-
-    A_POS9 | A_POS3, A_POS9 | A_OFF3, A_POS9 | A_NEG3, A_OFF9 | A_POS3,
-    A_OFF9 | A_OFF3, A_OFF9 | A_NEG3, A_NEG9 | A_POS3, A_NEG9 | A_OFF3,
-    A_NEG9 | A_NEG3
-
-};
-
 uint8_t svm_phase_levels[] = {NEG3, OFF3, POS3};
 
 Timer_Handle timer1;
 FILE *fp;
+
 void *mainThread(void *arg0) {
     start_chopper();
 
@@ -99,7 +80,6 @@ void *mainThread(void *arg0) {
     }
 
     Timer_Params params1;
-
     Timer_Params_init(&params1);
     params1.timerMode = Timer_FREE_RUNNING;
     params.period = 2 ^ 32 - 1;
@@ -137,12 +117,12 @@ void applyPortSetting(uint32_t ui32Port) {
 }
 
 void stair_case_timer_callback(Timer_Handle myHandle) {
-    setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
-    setPinsBuffered(GPIO_PORTL_BASE, states[state_counter % sizeof(states)],
-                    true);
-    applyPortSetting(GPIO_PORTL_BASE);
+    //setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
+    //setPinsBuffered(GPIO_PORTL_BASE, states[state_counter % sizeof(states)],
+    //                true);
+   // applyPortSetting(GPIO_PORTL_BASE);
 
-    state_counter++;
+    //state_counter++;
 }
 
 void svm_timer_callback(Timer_Handle handle) {
@@ -196,9 +176,9 @@ void svm_timer_callback(Timer_Handle handle) {
     int32_t bc = b_phase - c_phase;
     int32_t ca = c_phase - a_phase;
 
-    setPinsBuffered(GPIO_PORTC_BASE, 0xFF, false);
     setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
     setPinsBuffered(GPIO_PORTK_BASE, 0xFF, false);
+    setPinsBuffered(GPIO_PORTC_BASE, 0xFF, false);
 
     setPinsBuffered(GPIO_PORTL_BASE,
                     svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET, true);
