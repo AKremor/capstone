@@ -30,7 +30,7 @@ volatile uint64_t state_counter = 0;
 
 #define A_PHASE_PIN_OFFSET 0  // Left shift value
 #define B_PHASE_PIN_OFFSET 4  // Left shift value
-#define C_PHASE_PIN_OFFSET 4  // Left shift value
+#define C_PHASE_PIN_OFFSET 2  // Left shift value
 
 uint8_t svm_phase_levels[] = {NEG3, OFF3, POS3};
 
@@ -198,7 +198,7 @@ void svm_timer_callback(Timer_Handle handle) {
                  svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET);
     GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
                  svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET);
-    GPIOPinWrite(GPIO_PORTC_BASE, 0xFF,
+    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
                  svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET);
     /*setPinsBuffered(PORTL, svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET,
                     true);
