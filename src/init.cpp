@@ -197,9 +197,8 @@ void svm_timer_callback(Timer_Handle handle) {
     GPIOPinWrite(GPIO_PORTL_BASE, 0xFF,
                  svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET);
     GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
-                 svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET);
-    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
-                 svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET);
+                 svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET |
+                     svm_phase_levels[c_phase] << C_PHASE_PIN_OFFSET);
     /*setPinsBuffered(PORTL, svm_phase_levels[a_phase] << A_PHASE_PIN_OFFSET,
                     true);
     setPinsBuffered(PORTK, svm_phase_levels[b_phase] << B_PHASE_PIN_OFFSET,
