@@ -147,7 +147,7 @@ void stair_case_timer_callback(Timer_Handle myHandle) {
 }
 
 void svm_timer_callback(Timer_Handle myHandle) {
-    float32_t Vdc = 1;
+    float32_t Vdc = 3;
     float32_t time = Timer_getCount(timer1);
     // TODO(akremor): Substitute time in here
     abc_quantity value = SineWave::getValueAbc(state_counter);
@@ -159,10 +159,10 @@ void svm_timer_callback(Timer_Handle myHandle) {
     hex_value.g = 1 / (3 * Vdc) * (2 * value.a - value.b - value.c);
     hex_value.h = 1 / (3 * Vdc) * (-1 * value.a + 2 * value.b - value.c);
 
-    gh_quantity Vul = {ceil(hex_value.g), floor(hex_value.h)};
-    gh_quantity Vlu = {floor(hex_value.g), ceil(hex_value.h)};
-    gh_quantity Vuu = {ceil(hex_value.g), ceil(hex_value.h)};
-    gh_quantity Vll = {floor(hex_value.g), floor(hex_value.h)};
+    gh_quantity Vul = {ceilf(hex_value.g), floorf(hex_value.h)};
+    gh_quantity Vlu = {floorf(hex_value.g), ceilf(hex_value.h)};
+    gh_quantity Vuu = {ceilf(hex_value.g), ceilf(hex_value.h)};
+    gh_quantity Vll = {floorf(hex_value.g), floorf(hex_value.h)};
 
     gh_quantity nearest_1 = Vul;
     gh_quantity nearest_2 = Vlu;
@@ -181,7 +181,7 @@ void svm_timer_callback(Timer_Handle myHandle) {
     bool constraints_satisfied = false;
     int32_t g = nearest_1.g;
     int32_t h = nearest_1.h;
-    int32_t n = 9;
+    int32_t n = 3;  // TODO
     while (!constraints_satisfied) {
         if (k >= 0 && k - g >= 0 && k - g - h >= 0 && k <= n - 1 &&
             k - g <= n - 1 && k - g - h <= n - 1) {
@@ -194,6 +194,10 @@ void svm_timer_callback(Timer_Handle myHandle) {
     int32_t a_phase = k;
     int32_t b_phase = k - nearest_1.g;
     int32_t c_phase = k - nearest_1.g - nearest_1.h;
+
+    int32_t ab = a_phase - b_phase;
+    int32_t bc = b_phase - c_phase;
+    int32_t ca = c_phase - a_phase;
 
     setPinsBuffered(GPIO_PORTC_BASE, 0xFF, false);
     setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
