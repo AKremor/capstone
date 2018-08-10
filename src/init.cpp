@@ -2,40 +2,40 @@
 #include <src/hal/Board.h>
 #include <src/reference_signal/sine_wave.h>
 #include <src/system_config.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
 #include <xdc/runtime/System.h>
+#include "arm_math.h"
 
-void applyPortSetting(uint32_t ui32Port);
-void setPinsBuffered(uint32_t ui32Port, uint8_t ui8Pins, uint8_t ui8Val);
 void svm_timer_callback(Timer_Handle handle);
-void stair_case_timer_callback(Timer_Handle handle);
 
 volatile uint64_t state_counter = 0;
 
-// A phase - L
-// B phase - K Up
-// C phase - K Low
+// Pins
+// A phase
 
-uint8_t svm_phase_levels_a[] = {0x04, 0x00, 0x02};
-uint8_t svm_phase_levels_b[] = {128, 0x00, 64};
-uint8_t svm_phase_levels_c[] = {32, 0x00, 16};
+enum hb_pin {
+    A_POS3 = 0x01,  // PL0
+    A_NEG3 = 0x02,  // PL1
+    A_POS9 = 0x04,  // PL2
+    A_NEG9 = 0x08,  // PL3
+    B_POS3 = 0x01,  // PK0
+    B_NEG3 = 0x02,  // PK1
+    B_POS9 = 0x04,  // PK2
+    B_NEG9 = 0x08,  // PK3
+    C_POS3 = 0x10,  // PK4
+    C_NEG3 = 0x20,  // PK5
+    C_POS9 = 0x40,  // PK6
+    C_NEG9 = 0x80   // PK7
+};
 
-Timer_Handle timer1;
-FILE *fp;
+uint8_t svm_phase_levels_a[] = {A_NEG3, 0x00, A_POS3};
+uint8_t svm_phase_levels_b[] = {B_NEG3, 0x00, B_POS3};
+uint8_t svm_phase_levels_c[] = {C_NEG3, 0x00, C_POS3};
 
-void *mainThread(void *arg0) {
-    start_chopper();
-
+void init_board() {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOL)))
-        ;
-
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
-    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOC)))
         ;
 
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);
@@ -45,11 +45,14 @@ void *mainThread(void *arg0) {
     GPIOPinTypeGPIOOutput(GPIO_PORTL_BASE,
                           GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 
-    GPIOPinTypeGPIOOutput(GPIO_PORTC_BASE,
-                          GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
-
     GPIOPinTypeGPIOOutput(GPIO_PORTK_BASE,
                           GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+};
+
+void *mainThread(void *arg0) {
+    start_chopper();
+
+    init_board();
 
     Timer_init();
 
@@ -60,7 +63,6 @@ void *mainThread(void *arg0) {
     params.period = svm_frequency_hz;
     params.periodUnits = Timer_PERIOD_HZ;
     params.timerMode = Timer_CONTINUOUS_CALLBACK;
-    params.timerCallback = stair_case_timer_callback;
     params.timerCallback = svm_timer_callback;
 
     timer0 = Timer_open(Board_TIMER0, &params);
@@ -69,60 +71,7 @@ void *mainThread(void *arg0) {
         System_abort("SVM timer did not start");
     }
 
-    Timer_Params params1;
-    Timer_Params_init(&params1);
-    params1.timerMode = Timer_FREE_RUNNING;
-    params.period = 2 ^ 32 - 1;
-    params.periodUnits = Timer_PERIOD_COUNTS;
-
-    timer1 = Timer_open(Board_TIMER1, &params1);
-
-    if (Timer_start(timer1) == Timer_STATUS_ERROR) {
-        System_abort("SVM timer did not start");
-    }
-
     return 0;
-}
-
-// TODO(akremor): Sizing and naming
-static uint32_t port_buffer[15] = {0};
-
-void setPinsBuffered(uint32_t ui32Port, uint8_t ui8Pins, uint8_t ui8Val) {
-    // Takes in pins that can be | to set the value to val
-    // Some freaky memory shifting to resolve the base into a 0-indexed sequence
-    // GPIO_PORTA_BASE                 ((uint32_t)0x40058000)
-
-    uint8_t port_buffer_index = ui32Port;
-    //(ui32Port >> 3) - 88;
-
-    if (ui8Val) {
-        port_buffer[port_buffer_index] |= ui8Pins;
-    } else {
-        port_buffer[port_buffer_index] &= ~(ui8Pins);
-    }
-}
-
-void applyPortSetting(uint32_t ui32Port) {
-    // uint8_t port_buffer_index = (ui32Port >> 3) - 88;
-
-    if (ui32Port == 1) {
-        GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, port_buffer[0]);
-    }
-    if (ui32Port == 2) {
-        GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, port_buffer[1]);
-    }
-    if (ui32Port == 3) {
-        GPIOPinWrite(GPIO_PORTC_BASE, 0xFF, port_buffer[2]);
-    }
-}
-
-void stair_case_timer_callback(Timer_Handle myHandle) {
-    // setPinsBuffered(GPIO_PORTL_BASE, 0xFF, false);
-    // setPinsBuffered(GPIO_PORTL_BASE, states[state_counter % sizeof(states)],
-    //                true);
-    // applyPortSetting(GPIO_PORTL_BASE);
-
-    // state_counter++;
 }
 
 void svm_timer_callback(Timer_Handle handle) {
@@ -139,14 +88,6 @@ void svm_timer_callback(Timer_Handle handle) {
     gh_quantity Vll = {floorf(hex_value.g), floorf(hex_value.h)};
 
     gh_quantity nearest_1 = Vul;
-    gh_quantity nearest_2 = Vlu;
-    gh_quantity nearest_3;
-
-    if (copysignf(1.0, hex_value.g + hex_value.h - Vul.g - Vul.h) == 1) {
-        nearest_3 = Vuu;
-    } else {
-        nearest_3 = Vll;
-    }
 
     // Now we need to find an available voltage state.
     // This is a very rudimentary implementation
