@@ -1,4 +1,4 @@
-#include <src/reference_signal/sine_wave.h>
+#include <source/reference_signal/sine_wave.h>
 #include "arm_math.h"
 
 abc_quantity SineWave::getValueAbc(float32_t time) {

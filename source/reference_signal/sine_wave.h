@@ -1,4 +1,4 @@
-#include <src/reference_signal/signal_interface.h>
+#include <source/reference_signal/signal_interface.h>
 #include <stdint.h>
 
 class SineWave : public ISignal {

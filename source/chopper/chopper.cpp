@@ -1,4 +1,4 @@
-#include <src/system_config.h>
+#include <source/system_config.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 
 void start_chopper() {

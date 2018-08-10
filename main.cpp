@@ -3,6 +3,10 @@
 
 extern void *mainThread(void *arg0);
 
+extern "C" {
+void NDK_hookInit(){};
+}
+
 int main(void) {
     Task_Params task_params;
     Task_Params_init(&task_params);

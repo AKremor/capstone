@@ -1,7 +1,7 @@
-#include <src/chopper/chopper.h>
-#include <src/hal/Board.h>
-#include <src/reference_signal/sine_wave.h>
-#include <src/system_config.h>
+#include <source/chopper/chopper.h>
+#include <source/hal/Board.h>
+#include <source/reference_signal/sine_wave.h>
+#include <source/system_config.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
 #include <xdc/runtime/System.h>
@@ -10,9 +10,6 @@
 void svm_timer_callback(Timer_Handle handle);
 
 volatile uint64_t state_counter = 0;
-
-// Pins
-// A phase
 
 enum hb_pin {
     A_POS3 = 0x01,  // PL0

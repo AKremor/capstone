@@ -1,4 +1,4 @@
-#include <src/hal/Board.h>
+#include <source/hal/Board.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <ti/drivers/PWM.h>

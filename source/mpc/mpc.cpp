@@ -1,6 +1,6 @@
 #include <math.h>
-#include <src/mpc/mpc.h>
-#include <src/mpc/switching_states.h>
+#include <source/mpc/mpc.h>
+#include <source/mpc/switching_states.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <xdc/runtime/System.h>
 #include <limits>
