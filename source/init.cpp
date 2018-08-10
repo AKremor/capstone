@@ -46,7 +46,7 @@ void init_board() {
                           GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
-void *mainThread(void *arg0) {
+void mainThread(void *arg0) {
     start_chopper();
 
     init_board();
@@ -57,7 +57,7 @@ void *mainThread(void *arg0) {
     Timer_Params params;
 
     Timer_Params_init(&params);
-    params.period = svm_frequency_hz;
+    params.period = svm_timer_hz;
     params.periodUnits = Timer_PERIOD_HZ;
     params.timerMode = Timer_CONTINUOUS_CALLBACK;
     params.timerCallback = svm_timer_callback;
@@ -67,8 +67,6 @@ void *mainThread(void *arg0) {
     if (Timer_start(timer0) == Timer_STATUS_ERROR) {
         System_abort("SVM timer did not start");
     }
-
-    return 0;
 }
 
 void svm_timer_callback(Timer_Handle handle) {
@@ -93,7 +91,7 @@ void svm_timer_callback(Timer_Handle handle) {
     bool constraints_satisfied = false;
     int32_t g = nearest_1.g;
     int32_t h = nearest_1.h;
-    int32_t n = 3;  // TODO
+    int32_t n = n_levels;
     while (!constraints_satisfied) {
         if (k >= 0 && k - g >= 0 && k - g - h >= 0 && k <= n - 1 &&
             k - g <= n - 1 && k - g - h <= n - 1) {

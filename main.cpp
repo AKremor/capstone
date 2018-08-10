@@ -1,7 +1,7 @@
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
 
-extern void *mainThread(void *arg0);
+extern void mainThread(void *arg0);
 
 extern "C" {
 void NDK_hookInit(){};

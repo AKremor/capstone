@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
+#include "arm_math.h"
 
 static const uint32_t chopper_pwm_peripheral = SYSCTL_PERIPH_PWM0;
 static const uint32_t chopper_pwm_base = PWM0_BASE;
@@ -21,6 +22,11 @@ static const uint32_t chopper_falling_dead_band_ns = 3600;
 // 6000, 672, 672 for 20kHz
 // 3000, 1000, 1000 for 40kHz
 
-static constexpr uint16_t svm_frequency_hz = 100;
+// Internal reference generation
+static constexpr uint16_t svm_timer_hz = 100;
+static constexpr uint32_t n_levels = 3;
+static constexpr uint32_t Vdc = 1;
+static constexpr float32_t magnitude = 0.866 * 1.141 * (n_levels - 1) * Vdc;
+static constexpr float32_t frequency_hz = 20;
 
 #endif /* SRC_SYSTEM_CONFIG_H_ */
