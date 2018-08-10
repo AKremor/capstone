@@ -26,7 +26,8 @@ void start_chopper() {
     // N = (1 / f) * SysClk.  Where N is the function parameter, f is the
     // desired frequency, and SysClk is the system clock frequency. Note that
     // the maximum period you can set is 2^16 - 1.
-    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0, 1.0 * system_clock_hz / chopper_hz);
+    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0,
+                    1.0 * system_clock_mhz * 10e6 / chopper_hz);
 
     // Duty cycle set as a period of counts
     PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,
@@ -41,8 +42,8 @@ void start_chopper() {
     // Configured as clock ticks so need to convert from a time duration
     MAP_PWMDeadBandEnable(
         chopper_pwm_base, PWM_GEN_0,
-        chopper_rising_dead_band_ns * 10e9 * system_clock_hz,
-        chopper_falling_dead_band_ns * 10e9 * system_clock_hz);
+        chopper_rising_dead_band_ns * 10e-3 * system_clock_mhz,
+        chopper_falling_dead_band_ns * 10e-3 * system_clock_mhz);
 
     /* Enable the PWM0 Bit 0 (PF0) and Bit 1 (PF1) output signals. */
     MAP_PWMOutputState(chopper_pwm_base, PWM_OUT_0_BIT | PWM_OUT_1_BIT, true);

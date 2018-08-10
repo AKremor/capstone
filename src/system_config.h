@@ -11,7 +11,7 @@ static const uint32_t chopper_gpio_port_base = GPIO_PORTF_BASE;
 static const uint32_t chopper_gpio_pin_ac_pos = GPIO_PIN_0;
 static const uint32_t chopper_gpio_pin_ac_neg = GPIO_PIN_1;
 
-constexpr uint32_t system_clock_hz = 120e6;
+constexpr uint32_t system_clock_mhz = 120;
 
 static const uint32_t chopper_hz = 10000;
 static const uint32_t chopper_rising_dead_band_ns = 3600;
