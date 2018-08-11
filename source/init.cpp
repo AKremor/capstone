@@ -42,15 +42,14 @@ void init_board() {
     GPIOPinTypeGPIOOutput(GPIO_PORTL_BASE,
                           GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 
-    GPIOPinTypeGPIOOutput(GPIO_PORTK_BASE,
-                          GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+    GPIOPinTypeGPIOOutput(
+        GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
+                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
-void mainThread(void *arg0) {
-    start_chopper();
+Timer_Handle system_timer;
 
-    init_board();
-
+void init_timers() {
     Timer_init();
 
     Timer_Handle timer0;
@@ -67,10 +66,30 @@ void mainThread(void *arg0) {
     if (Timer_start(timer0) == Timer_STATUS_ERROR) {
         System_abort("SVM timer did not start");
     }
+
+    Timer_Params system_timer_params;
+
+    Timer_Params_init(&system_timer_params);
+    system_timer_params.period = 2 ^ 32 - 1;
+    system_timer_params.periodUnits = Timer_PERIOD_COUNTS;
+    system_timer_params.timerMode = Timer_FREE_RUNNING;
+
+    system_timer = Timer_open(Board_TIMER1, &system_timer_params);
+
+    if (Timer_start(system_timer) == Timer_STATUS_ERROR) {
+        System_abort("System timer did not start");
+    }
+};
+
+void mainThread(void *arg0) {
+    start_chopper();
+
+    init_board();
+
+    init_timers();
 }
 
 void svm_timer_callback(Timer_Handle handle) {
-    float32_t Vdc = 1;
     abc_quantity value = SineWave::getValueAbc(state_counter);
 
     gh_quantity hex_value;
@@ -99,6 +118,7 @@ void svm_timer_callback(Timer_Handle handle) {
             break;
         }
         if (k >= n - 1) {
+            // Saturation/error in modulator
             break;
         }
         k++;
