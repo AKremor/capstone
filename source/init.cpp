@@ -1,5 +1,6 @@
 #include <source/chopper/chopper.h>
 #include <source/hal/Board.h>
+#include <source/hal/adc.h>
 #include <source/reference_signal/sine_wave.h>
 #include <source/system_config.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
@@ -87,6 +88,12 @@ void mainThread(void *arg0) {
     init_board();
 
     init_timers();
+
+    init_adc();
+
+    uint32_t reading = 0;
+    read_adc(&reading);
+    int abc = 123;
 }
 
 void svm_timer_callback(Timer_Handle handle) {
