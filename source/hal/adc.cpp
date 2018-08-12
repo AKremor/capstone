@@ -33,24 +33,22 @@ void init_adc() {
     continuousConversion[1].sampleBufferTwo = NULL;
     continuousConversion[1].samplesRequestedCount = 1;
 
-    /*
+    continuousConversion[2].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL2;
+    continuousConversion[2].sampleBuffer = &sampleBufferOne[2];
+    continuousConversion[2].samplesRequestedCount = 1;
 
-        continuousConversion[2].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL2;
-        continuousConversion[2].sampleBuffer = NULL;
-        continuousConversion[2].samplesRequestedCount = 1;
+    continuousConversion[3].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL3;
+    continuousConversion[3].sampleBuffer = &sampleBufferOne[3];
+    continuousConversion[3].samplesRequestedCount = 1;
 
-        continuousConversion[3].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL3;
-        continuousConversion[3].sampleBuffer = NULL;
-        continuousConversion[3].samplesRequestedCount = 1;
+    continuousConversion[4].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL4;
+    continuousConversion[4].sampleBuffer = &sampleBufferOne[4];
+    continuousConversion[4].samplesRequestedCount = 1;
 
-        continuousConversion[4].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL4;
-        continuousConversion[4].sampleBuffer = NULL;
-        continuousConversion[4].samplesRequestedCount = 1;
+    continuousConversion[5].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL5;
+    continuousConversion[5].sampleBuffer = &sampleBufferOne[5];
+    continuousConversion[5].samplesRequestedCount = 1;
 
-        continuousConversion[5].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL5;
-        continuousConversion[5].sampleBuffer = NULL;
-        continuousConversion[5].samplesRequestedCount = 1;
-    */
     if (!adcBuf) {
         /* AdcBuf did not open correctly. */
         while (1)
@@ -85,7 +83,10 @@ int_fast16_t convertAdjustedDifferential(ADCBuf_Handle handle,
 void read_adc(uint32_t *reading) {
     /* Blocking mode conversion */
 
-    for (int channel = 0; channel < 2; channel++) {
+    // This probably isn't how the multichannel reads are meant to work
+    // But anything else (such as calling multiple conversions at once in
+    // _convert result in a dma error
+    for (int channel = 0; channel < 6; channel++) {
         int_fast16_t res =
             ADCBuf_convert(adcBuf, &continuousConversion[channel], 1);
         if (res == ADCBuf_STATUS_SUCCESS) {

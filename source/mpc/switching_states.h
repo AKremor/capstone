@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 
-static constexpr int n_phases = 3;
-static constexpr int n_levels = 27;  // TODO This is per phase
+//static constexpr int n_phases = 3;
+//static constexpr int n_levels = 27;  // TODO This is per phase
 
 class PhaseVoltageLevel {
    public:

@@ -19,6 +19,11 @@
 extern "C" {
 #endif
 
+typedef enum Board_UARTName {
+    UMBILICAL_SIM = 0,
+    Board_UARTCOUNT
+} Board_UARTName;
+
 /*!
  *  @def    MSP_EXP432E401Y_ADCName
  *  @brief  Enum of ADC channels on the MSP_EXP432E401Y dev board

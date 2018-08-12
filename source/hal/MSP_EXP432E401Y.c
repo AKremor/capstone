@@ -167,6 +167,35 @@ const ADCBuf_Config ADCBuf_config[MSP_EXP432E401Y_ADCBUFCOUNT] = {
 const uint_least8_t ADCBuf_count = MSP_EXP432E401Y_ADCBUFCOUNT;
 
 /*
+ *  =============================== UART ===============================
+ */
+#include <ti/drivers/UART.h>
+#include <ti/drivers/uart/UARTMSP432E4.h>
+
+UARTMSP432E4_Object uartMSP432Objects[Board_UARTCOUNT];
+unsigned char uartMSP432E4RingBuffer[Board_UARTCOUNT][32];
+
+const UARTMSP432E4_HWAttrs uartMSP432E4HWAttrs[] = {
+    {.baseAddr = UART0_BASE,
+     .intNum = INT_UART0,
+     .intPriority = (~0),
+     .flowControl = UARTMSP432E4_FLOWCTRL_NONE,
+     .ringBufPtr = uartMSP432E4RingBuffer[0],
+     .ringBufSize = sizeof(uartMSP432E4RingBuffer[0]),
+     .rxPin = UARTMSP432E4_PA0_U0RX,
+     .txPin = UARTMSP432E4_PA1_U0TX,
+     .ctsPin = UARTMSP432E4_PIN_UNASSIGNED,
+     .rtsPin = UARTMSP432E4_PIN_UNASSIGNED,
+     .errorFxn = NULL}};
+
+const UART_Config UART_config[Board_UARTCOUNT] = {
+    {.fxnTablePtr = &UARTMSP432E4_fxnTable,
+     .object = &uartMSP432Objects[0],
+     .hwAttrs = &uartMSP432E4HWAttrs[0]}};
+
+const uint_least8_t UART_count = Board_UARTCOUNT;
+
+/*
  *  =============================== DMA ===============================
  */
 #include <ti/drivers/dma/UDMAMSP432E4.h>
