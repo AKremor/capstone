@@ -23,12 +23,12 @@ static const uint32_t chopper_falling_dead_band_ns = 3600;
 // 3000, 1000, 1000 for 40kHz
 
 // Internal reference generation
-static constexpr uint16_t svm_timer_hz = 100;
-static constexpr uint32_t n_levels = 9;
+static constexpr uint16_t svm_timer_hz = 50000;
+static constexpr uint32_t n_levels = 27;
 static constexpr float32_t Vdc = 1;
 // static constexpr float32_t magnitude = 1 * 0.866 * 1.141 * ((n_levels - 1)
 // / 1.0) * Vdc;
-static constexpr float32_t magnitude = 5;
-static constexpr float32_t frequency_hz = 20;
+static constexpr float32_t magnitude = 14;
+static constexpr float32_t frequency_hz = 2000;
 
 #endif /* SRC_SYSTEM_CONFIG_H_ */

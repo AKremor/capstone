@@ -14,44 +14,86 @@ void svm_timer_callback(Timer_Handle handle);
 volatile uint64_t state_counter = 0;
 
 enum hb_pin {
-    A_POS3 = 0x01,  // PL0
-    A_NEG3 = 0x02,  // PL1
+    A_POS1 = 0x01,  // PL0
+    A_OFF1 = 0x00,  // N/A
+    A_NEG1 = 0x02,  // PL1
+    A_POS3 = 0x04,  // PL2
     A_OFF3 = 0x00,  // N/A
-    A_POS9 = 0x04,  // PL2
-    A_NEG9 = 0x08,  // PL3
+    A_NEG3 = 0x08,  // PL3
+    A_POS9 = 0x10,  // PL4
     A_OFF9 = 0x00,  // N/A
-    B_POS3 = 0x01,  // PK0
-    B_NEG3 = 0x02,  // PK1
-    B_POS9 = 0x04,  // PK2
-    B_NEG9 = 0x08,  // PK3
-    B_OFF9 = 0x00,  // N/A
+    A_NEG9 = 0x20,  // PL5
+
+    B_POS1 = 0x01,  // PK0
+    B_OFF1 = 0x00,  // N/A
+    B_NEG1 = 0x02,  // PK1
+    B_POS3 = 0x04,  // PK2
     B_OFF3 = 0x00,  // N/A
-    C_POS3 = 0x10,  // PK4
-    C_NEG3 = 0x20,  // PK5
-    C_POS9 = 0x40,  // PK6
-    C_NEG9 = 0x80,  // PK7
-    C_OFF9 = 0x00,  // N/A
+    B_NEG3 = 0x08,  // PK3
+    B_POS9 = 0x10,  // PK4
+    B_OFF9 = 0x20,  // N/A
+    B_NEG9 = 0x40,  // PK5
+
+    // TODO Port
+    C_POS1 = 0x10,  // PK0
+    C_OFF1 = 0x00,  // N/A
+    C_NEG1 = 0x20,  // PK1
+    C_POS3 = 0x10,  // PK2
     C_OFF3 = 0x00,  // N/A
+    C_NEG3 = 0x20,  // PK3
+    C_POS9 = 0x40,  // PK4
+    C_OFF9 = 0x00,  // N/A
+    C_NEG9 = 0x80,  // PK5
+
 };
 
-/* 3 phase 3 level
-uint8_t svm_phase_levels_a[] = {A_NEG3, 0x00, A_POS3};
-uint8_t svm_phase_levels_b[] = {B_NEG3, 0x00, B_POS3};
-uint8_t svm_phase_levels_c[] = {C_NEG3, 0x00, C_POS3};
-*/
-
 uint8_t svm_phase_levels_a[] = {
-    A_NEG9 | A_NEG3, A_NEG9 | A_OFF3, A_NEG9 | A_POS3,
-    A_OFF9 | A_NEG3, A_OFF9 | A_OFF3, A_OFF9 | A_POS3,
-    A_POS9 | A_NEG3, A_POS9 | A_OFF3, A_POS9 | A_POS3};
+    A_NEG9 | A_NEG3 | A_NEG1, A_NEG9 | A_NEG3 | A_OFF1,
+    A_NEG9 | A_NEG3 | A_POS1, A_NEG9 | A_OFF3 | A_NEG1,
+    A_NEG9 | A_OFF3 | A_OFF1, A_NEG9 | A_OFF3 | A_POS1,
+    A_NEG9 | A_POS3 | A_NEG1, A_NEG9 | A_POS3 | A_OFF1,
+    A_NEG9 | A_POS3 | A_POS1, A_OFF9 | A_NEG3 | A_NEG1,
+    A_OFF9 | A_NEG3 | A_OFF1, A_OFF9 | A_NEG3 | A_POS1,
+    A_OFF9 | A_OFF3 | A_NEG1, A_OFF9 | A_OFF3 | A_OFF1,
+    A_OFF9 | A_OFF3 | A_POS1, A_OFF9 | A_POS3 | A_NEG1,
+    A_OFF9 | A_POS3 | A_OFF1, A_OFF9 | A_POS3 | A_POS1,
+    A_POS9 | A_NEG3 | A_NEG1, A_POS9 | A_NEG3 | A_OFF1,
+    A_POS9 | A_NEG3 | A_POS1, A_POS9 | A_OFF3 | A_NEG1,
+    A_POS9 | A_OFF3 | A_OFF1, A_POS9 | A_OFF3 | A_POS1,
+    A_POS9 | A_POS3 | A_NEG1, A_POS9 | A_POS3 | A_OFF1,
+    A_POS9 | A_POS3 | A_POS1};
+
 uint8_t svm_phase_levels_b[] = {
-    B_NEG9 | B_NEG3, B_NEG9 | B_OFF3, B_NEG9 | B_POS3,
-    B_OFF9 | B_NEG3, B_OFF9 | B_OFF3, B_OFF9 | B_POS3,
-    B_POS9 | B_NEG3, B_POS9 | B_OFF3, B_POS9 | B_POS3};
+    B_NEG9 | B_NEG3 | B_NEG1, B_NEG9 | B_NEG3 | B_OFF1,
+    B_NEG9 | B_NEG3 | B_POS1, B_NEG9 | B_OFF3 | B_NEG1,
+    B_NEG9 | B_OFF3 | B_OFF1, B_NEG9 | B_OFF3 | B_POS1,
+    B_NEG9 | B_POS3 | B_NEG1, B_NEG9 | B_POS3 | B_OFF1,
+    B_NEG9 | B_POS3 | B_POS1, B_OFF9 | B_NEG3 | B_NEG1,
+    B_OFF9 | B_NEG3 | B_OFF1, B_OFF9 | B_NEG3 | B_POS1,
+    B_OFF9 | B_OFF3 | B_NEG1, B_OFF9 | B_OFF3 | B_OFF1,
+    B_OFF9 | B_OFF3 | B_POS1, B_OFF9 | B_POS3 | B_NEG1,
+    B_OFF9 | B_POS3 | B_OFF1, B_OFF9 | B_POS3 | B_POS1,
+    B_POS9 | B_NEG3 | B_NEG1, B_POS9 | B_NEG3 | B_OFF1,
+    B_POS9 | B_NEG3 | B_POS1, B_POS9 | B_OFF3 | B_NEG1,
+    B_POS9 | B_OFF3 | B_OFF1, B_POS9 | B_OFF3 | B_POS1,
+    B_POS9 | B_POS3 | B_NEG1, B_POS9 | B_POS3 | B_OFF1,
+    B_POS9 | B_POS3 | B_POS1};
+
 uint8_t svm_phase_levels_c[] = {
-    C_NEG9 | C_NEG3, C_NEG9 | C_OFF3, C_NEG9 | C_POS3,
-    C_OFF9 | C_NEG3, C_OFF9 | C_OFF3, C_OFF9 | C_POS3,
-    C_POS9 | C_NEG3, C_POS9 | C_OFF3, C_POS9 | C_POS3};
+    C_NEG9 | C_NEG3 | C_NEG1, C_NEG9 | C_NEG3 | C_OFF1,
+    C_NEG9 | C_NEG3 | C_POS1, C_NEG9 | C_OFF3 | C_NEG1,
+    C_NEG9 | C_OFF3 | C_OFF1, C_NEG9 | C_OFF3 | C_POS1,
+    C_NEG9 | C_POS3 | C_NEG1, C_NEG9 | C_POS3 | C_OFF1,
+    C_NEG9 | C_POS3 | C_POS1, C_OFF9 | C_NEG3 | C_NEG1,
+    C_OFF9 | C_NEG3 | C_OFF1, C_OFF9 | C_NEG3 | C_POS1,
+    C_OFF9 | C_OFF3 | C_NEG1, C_OFF9 | C_OFF3 | C_OFF1,
+    C_OFF9 | C_OFF3 | C_POS1, C_OFF9 | C_POS3 | C_NEG1,
+    C_OFF9 | C_POS3 | C_OFF1, C_OFF9 | C_POS3 | C_POS1,
+    C_POS9 | C_NEG3 | C_NEG1, C_POS9 | C_NEG3 | C_OFF1,
+    C_POS9 | C_NEG3 | C_POS1, C_POS9 | C_OFF3 | C_NEG1,
+    C_POS9 | C_OFF3 | C_OFF1, C_POS9 | C_OFF3 | C_POS1,
+    C_POS9 | C_POS3 | C_NEG1, C_POS9 | C_POS3 | C_OFF1,
+    C_POS9 | C_POS3 | C_POS1};
 
 void init_board() {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
@@ -62,8 +104,9 @@ void init_board() {
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOK)))
         ;
 
-    GPIOPinTypeGPIOOutput(GPIO_PORTL_BASE,
-                          GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
+    GPIOPinTypeGPIOOutput(
+        GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
+                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 
     GPIOPinTypeGPIOOutput(
         GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
@@ -204,26 +247,56 @@ void svm_timer_callback(Timer_Handle handle) {
     int32_t b_phase = k - nearest_1.g;
     int32_t c_phase = k - nearest_1.g - nearest_1.h;
 
-    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[a_phase]);
-    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
-                 svm_phase_levels_b[b_phase] | svm_phase_levels_c[c_phase]);
+    // GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[a_phase]); // TODO
+    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[b_phase]);
+    // GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[a_phase]); // TODO
 
     state_counter++;
 
-    /*
-    int8_t ref_val_mv = value.b * 10;
+    int8_t ref_val_mv = value.b * 1;
 
-*/
+    int8_t b_9_cell;
+    if (svm_phase_levels_b[b_phase] & B_POS9) {
+        b_9_cell = 1;
+    } else if (svm_phase_levels_b[b_phase] & B_NEG9) {
+        b_9_cell = -1;
+    } else {
+        b_9_cell = 0;
+    }
 
-    int8_t ref_val_mv = (value.b - value.c + value.c) * 10;
-    int8_t buffer[7] = {0xCA,
-                        0xFE,
-                        (int8_t)a_phase - sizeof(svm_phase_levels_a) / 2,
-                        (int8_t)(b_phase - sizeof(svm_phase_levels_b) / 2) -
-                            (c_phase - sizeof(svm_phase_levels_c) / 2),
-                        (int8_t)c_phase - sizeof(svm_phase_levels_c) / 2,
-                        ref_val_mv,
-                        0};
+    int8_t b_3_cell;
+    if (svm_phase_levels_b[b_phase] & B_POS3) {
+        b_3_cell = 1;
+    } else if (svm_phase_levels_b[b_phase] & B_NEG3) {
+        b_3_cell = -1;
+    } else {
+        b_3_cell = 0;
+    }
 
-    UART_write(uart, buffer, 7);
+    int8_t b_1_cell;
+    if (svm_phase_levels_b[b_phase] & B_POS1) {
+        b_1_cell = 1;
+    } else if (svm_phase_levels_b[b_phase] & B_NEG1) {
+        b_1_cell = -1;
+    } else {
+        b_1_cell = 0;
+    }
+
+    int8_t buffer[10] = {
+        0xCA,
+        0xFE,
+        (int8_t)(a_phase - sizeof(svm_phase_levels_a) / 2) -
+            (b_phase - sizeof(svm_phase_levels_b) / 2),
+        (int8_t)(b_phase - sizeof(svm_phase_levels_b) / 2) -
+            (c_phase - sizeof(svm_phase_levels_c) / 2),
+        (int8_t)(c_phase - sizeof(svm_phase_levels_c) / 2) -
+            (a_phase - sizeof(svm_phase_levels_a) / 2),
+        ref_val_mv,
+        0,         // What is this? Second byte of the magnitude I think
+        b_9_cell,  // b phase 9 level
+        b_3_cell,  // b phase 3 level
+        b_1_cell   // b phase 1 level
+    };
+
+    UART_write(uart, buffer, 10);
 }
