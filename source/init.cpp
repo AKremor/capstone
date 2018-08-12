@@ -211,11 +211,20 @@ void svm_timer_callback(Timer_Handle handle) {
 
     state_counter++;
 
-    // Write the phase levels
-    // int8_t buffer[3] = {(int8_t)a_phase, (int8_t)b_phase, (int8_t)c_phase};
-    int8_t buffer[3] = {(int8_t)a_phase - sizeof(svm_phase_levels_a) / 2,
-                        (int8_t)b_phase - sizeof(svm_phase_levels_b) / 2,
-                        (int8_t)c_phase - sizeof(svm_phase_levels_c) / 2};
+    /*
+    int8_t ref_val_mv = value.b * 10;
 
-    UART_write(uart, buffer, 3);
+*/
+
+    int8_t ref_val_mv = (value.b - value.c + value.c) * 10;
+    int8_t buffer[7] = {0xCA,
+                        0xFE,
+                        (int8_t)a_phase - sizeof(svm_phase_levels_a) / 2,
+                        (int8_t)(b_phase - sizeof(svm_phase_levels_b) / 2) -
+                            (c_phase - sizeof(svm_phase_levels_c) / 2),
+                        (int8_t)c_phase - sizeof(svm_phase_levels_c) / 2,
+                        ref_val_mv,
+                        0};
+
+    UART_write(uart, buffer, 7);
 }

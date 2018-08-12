@@ -26,7 +26,9 @@ static const uint32_t chopper_falling_dead_band_ns = 3600;
 static constexpr uint16_t svm_timer_hz = 100;
 static constexpr uint32_t n_levels = 9;
 static constexpr float32_t Vdc = 1;
-static constexpr float32_t magnitude = 0.8 * 0.866 * 1.141 * ((n_levels - 0) / 1.0) * Vdc;
+// static constexpr float32_t magnitude = 1 * 0.866 * 1.141 * ((n_levels - 1)
+// / 1.0) * Vdc;
+static constexpr float32_t magnitude = 5;
 static constexpr float32_t frequency_hz = 20;
 
 #endif /* SRC_SYSTEM_CONFIG_H_ */
