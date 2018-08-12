@@ -2,97 +2,78 @@
 #include <source/hal/adc.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <ti/drivers/ADCBuf.h>
-
-ADCBuf_Conversion continuousConversion[6];
-uint16_t sampleBufferOne[6] = {NULL};
-uint16_t sampleBufferTwo[6] = {NULL};
-float outputBuffer[6] = {NULL};
-ADCBuf_Handle adcBuf;
+#include <ti/devices/msp432e4/driverlib/driverlib.h>
+#include "arm_math.h"
 
 void init_adc() {
-    ADCBuf_init();
-    ADCBuf_Params adcBufParams;
-    ADCBuf_Params_init(&adcBufParams);
-    adcBufParams.callbackFxn = NULL;
-    adcBufParams.recurrenceMode = ADCBuf_RECURRENCE_MODE_ONE_SHOT;
-    adcBufParams.returnMode = ADCBuf_RETURN_MODE_BLOCKING;
-    adcBufParams.samplingFrequency = 200;
-    adcBuf = ADCBuf_open(MSP_EXP432E401Y_ADCBUF0, &adcBufParams);
-
-    /* Configure the conversion struct for two channels on same sequencer */
-    continuousConversion[0].arg = NULL;
-    continuousConversion[0].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL0;
-    continuousConversion[0].sampleBuffer = &sampleBufferOne[0];
-    continuousConversion[0].sampleBufferTwo = NULL;
-    continuousConversion[0].samplesRequestedCount = 1;
-
-    continuousConversion[1].arg = NULL;
-    continuousConversion[1].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL1;
-    continuousConversion[1].sampleBuffer = &sampleBufferOne[1];
-    continuousConversion[1].sampleBufferTwo = NULL;
-    continuousConversion[1].samplesRequestedCount = 1;
-
-    continuousConversion[2].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL2;
-    continuousConversion[2].sampleBuffer = &sampleBufferOne[2];
-    continuousConversion[2].samplesRequestedCount = 1;
-
-    continuousConversion[3].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL3;
-    continuousConversion[3].sampleBuffer = &sampleBufferOne[3];
-    continuousConversion[3].samplesRequestedCount = 1;
-
-    continuousConversion[4].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL4;
-    continuousConversion[4].sampleBuffer = &sampleBufferOne[4];
-    continuousConversion[4].samplesRequestedCount = 1;
-
-    continuousConversion[5].adcChannel = MSP_EXP432E401Y_ADCBUF0CHANNEL5;
-    continuousConversion[5].sampleBuffer = &sampleBufferOne[5];
-    continuousConversion[5].samplesRequestedCount = 1;
-
-    if (!adcBuf) {
-        /* AdcBuf did not open correctly. */
-        while (1)
-            ;
+    /* Enable the clock to GPIO Port E and wait for it to be ready */
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOE))) {
     }
+
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_5);
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_4);
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_2);
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_1);
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_0);
+
+    /* Enable the clock to ADC-0 and wait for it to be ready */
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
+    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_ADC0))) {
+    }
+
+    /* Configure Sequencer 2 to sample the differential analog channels. The
+     * end of conversion and interrupt generation is set for differential
+     * pair 1 */
+    ADCSequenceStepConfigure(ADC0_BASE, 2, 0, ADC_CTL_CH0 | ADC_CTL_D);
+    ADCSequenceStepConfigure(ADC0_BASE, 2, 1, ADC_CTL_CH1 | ADC_CTL_D);
+    ADCSequenceStepConfigure(
+        ADC0_BASE, 2, 3, ADC_CTL_CH4 | ADC_CTL_D | ADC_CTL_IE | ADC_CTL_END);
+
+    /* Enable sample sequence 2 with a processor signal trigger.  Sequencer 2
+     * will do a single sample when the processor sends a signal to start the
+     * conversion */
+    ADCSequenceConfigure(ADC0_BASE, 2, ADC_TRIGGER_PROCESSOR, 2);
+
+    /* Since sample sequence 2 is now configured, it must be enabled. */
+    ADCSequenceEnable(ADC0_BASE, 2);
+
+    /* Clear the interrupt status flag.  This is done to make sure the
+     * interrupt flag is cleared before we sample. */
+    ADCIntClear(ADC0_BASE, 2);
 }
 
-/* This function converts a differential buffer to signed microvolts*/
-int_fast16_t convertAdjustedDifferential(ADCBuf_Handle handle,
-
-                                         void *adjustedSampleBuffer,
-                                         float outputDifferentialBuffer[],
-                                         uint_fast16_t sampleCount) {
-    uint32_t i;
-    uint16_t *adjustedRawSampleBuf = (uint16_t *)adjustedSampleBuffer;
-
+float32_t convertAdjustedDifferential(int32_t raw_sample) {
     float refVoltage = 3.3f;
 
-    /* Converts the ADC result (14-bit) to a float with respect to refVoltage */
-    for (i = 0; i < sampleCount; i++) {
-        if (adjustedRawSampleBuf[i] == 0x800) {
-            outputDifferentialBuffer[i] = 0;
-        } else {
-            outputDifferentialBuffer[i] =
-                (refVoltage * (adjustedRawSampleBuf[i] - 0x800)) / 0x800;
-        }
+    if (raw_sample == 0x800) {
+        return 0;
+    } else {
+        return (refVoltage * (raw_sample - 0x800)) / 0x800;
     }
-
-    return ADCBuf_STATUS_SUCCESS;
 }
 
 void read_adc(uint32_t *reading) {
-    /* Blocking mode conversion */
+    uint32_t getADCValue[3];
+    /* Sample the channels forever.  Display the value on the console. */
+    while (1) {
+        /* Trigger the ADC conversion. */
+        ADCProcessorTrigger(ADC0_BASE, 2);
 
-    // This probably isn't how the multichannel reads are meant to work
-    // But anything else (such as calling multiple conversions at once in
-    // _convert result in a dma error
-    for (int channel = 0; channel < 6; channel++) {
-        int_fast16_t res =
-            ADCBuf_convert(adcBuf, &continuousConversion[channel], 1);
-        if (res == ADCBuf_STATUS_SUCCESS) {
-            convertAdjustedDifferential(
-                adcBuf, continuousConversion[channel].sampleBuffer,
-                outputBuffer + channel, 1);
+        /* Wait for conversion to be completed. */
+        while (!ADCIntStatus(ADC0_BASE, 2, false)) {
         }
+
+        /* Clear the ADC interrupt flag. */
+        ADCIntClear(ADC0_BASE, 2);
+
+        /* Read ADC Value. */
+        ADCSequenceDataGet(ADC0_BASE, 2, getADCValue);
+        float32_t samples[3];
+        for (int i = 0; i < 3; i++) {
+            samples[i] = convertAdjustedDifferential(getADCValue[i]);
+        }
+        int abc = 123;
     }
 }

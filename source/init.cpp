@@ -71,7 +71,6 @@ void init_board() {
 };
 
 Timer_Handle system_timer;
-
 UART_Handle uart;
 
 void uartcallback(UART_Handle handle, void *buf, size_t count) {}
@@ -134,11 +133,11 @@ void mainThread(void *arg0) {
 
     init_timers();
 
-    // init_adc();
+    init_adc();
 
-    // uint32_t reading = 0;
-    // read_adc(&reading);
-    // int abc = 123;
+    uint32_t reading = 0;
+    read_adc(&reading);
+    int abc = 123;
 }
 
 void svm_timer_callback(Timer_Handle handle) {
