@@ -116,7 +116,13 @@ void init_board() {
 Timer_Handle system_timer;
 UART_Handle uart;
 
+enum UART_READ_STATE { SYNC1, SYNC2, IN_SYNC, FINISHED };
+
+UART_READ_STATE uart_read_state = FINISHED;
+
 void uartcallback(UART_Handle handle, void *buf, size_t count) {}
+
+int8_t read_buffer[20];
 
 void init_uart() {
     UART_init();
@@ -127,10 +133,10 @@ void init_uart() {
     uart_params.readDataMode = UART_DATA_BINARY;
     uart_params.writeDataMode = UART_DATA_BINARY;
     uart_params.baudRate = 921600;
-    uart_params.readMode = UART_MODE_CALLBACK;
+    uart_params.readMode = UART_MODE_BLOCKING;
     uart_params.writeMode = UART_MODE_CALLBACK;
     uart_params.writeCallback = uartcallback;
-    uart_params.writeCallback = uartcallback;
+    // uart_params.readCallback = uartreadcallback;
 
     uart = UART_open(0, &uart_params);
 }
@@ -167,6 +173,10 @@ void init_timers() {
     }
 };
 
+abc_quantity load_voltage = {0, 0, 0};
+abc_quantity load_line_current = {0, 0, 0};
+abc_quantity load_ll_voltage = {0, 0, 0};
+
 void mainThread(void *arg0) {
     start_chopper();
 
@@ -179,12 +189,41 @@ void mainThread(void *arg0) {
     init_adc();
 
     uint32_t reading = 0;
-    read_adc(&reading);
-    int abc = 123;
+    // read_adc(&reading);
+
+    // Update the system state from uart
+    while (1) {
+        int8_t header[1];
+
+        while (true) {
+            if (UART_read(uart, header, 1)) {
+                if (header[0] == 'A') {
+                    break;
+                }
+            }
+        }
+
+        while (true) {
+            if (UART_read(uart, header, 1)) {
+                if (header[0] == 'a') {
+                    break;
+                }
+            }
+        }
+
+        // Sync'd
+        UART_read(uart, read_buffer, 9);
+
+        // TODO Set some values
+        int aaaa = 123;
+        load_voltage = {read_buffer[0], read_buffer[1], read_buffer[2]};
+        load_line_current = {read_buffer[3], read_buffer[4], read_buffer[5]};
+        load_ll_voltage = {read_buffer[6], read_buffer[7], read_buffer[8]};
+    }
 }
 
 void svm_timer_callback(Timer_Handle handle) {
-    abc_quantity value = SineWave::getValueAbc(state_counter);
+    abc_quantity v  ineWave::getValueAbc(state_counter);
 
     gh_quantity hex_value;
     hex_value.g = 1 / (3 * Vdc) * (2 * value.a - value.b - value.c);
@@ -253,50 +292,52 @@ void svm_timer_callback(Timer_Handle handle) {
 
     state_counter++;
 
-    int8_t ref_val_mv = value.b * 1;
+    float scaling_factor = 1;
+    int8_t ref_val_a = value.a * scaling_factor;
+    int8_t ref_val_b = value.b * scaling_factor;
+    int8_t ref_val_c = value.c * scaling_factor;
 
-    int8_t b_9_cell;
-    if (svm_phase_levels_b[b_phase] & B_POS9) {
-        b_9_cell = 1;
-    } else if (svm_phase_levels_b[b_phase] & B_NEG9) {
-        b_9_cell = -1;
-    } else {
-        b_9_cell = 0;
-    }
+    int8_t a_9_cell = ((svm_phase_levels_a[a_phase] & A_POS9) ? 1 : 0) +
+                      ((svm_phase_levels_a[a_phase] & A_NEG9) ? -1 : 0);
+    int8_t a_3_cell = ((svm_phase_levels_a[a_phase] & A_POS3) ? 1 : 0) +
+                      ((svm_phase_levels_a[a_phase] & A_NEG3) ? -1 : 0);
+    int8_t a_1_cell = ((svm_phase_levels_a[a_phase] & A_POS1) ? 1 : 0) +
+                      ((svm_phase_levels_a[a_phase] & A_NEG1) ? -1 : 0);
 
-    int8_t b_3_cell;
-    if (svm_phase_levels_b[b_phase] & B_POS3) {
-        b_3_cell = 1;
-    } else if (svm_phase_levels_b[b_phase] & B_NEG3) {
-        b_3_cell = -1;
-    } else {
-        b_3_cell = 0;
-    }
+    int8_t b_9_cell = ((svm_phase_levels_b[b_phase] & B_POS9) ? 1 : 0) +
+                      ((svm_phase_levels_b[b_phase] & B_NEG9) ? -1 : 0);
+    int8_t b_3_cell = ((svm_phase_levels_b[b_phase] & B_POS3) ? 1 : 0) +
+                      ((svm_phase_levels_b[b_phase] & B_NEG3) ? -1 : 0);
+    int8_t b_1_cell = ((svm_phase_levels_b[b_phase] & B_POS1) ? 1 : 0) +
+                      ((svm_phase_levels_b[b_phase] & B_NEG1) ? -1 : 0);
 
-    int8_t b_1_cell;
-    if (svm_phase_levels_b[b_phase] & B_POS1) {
-        b_1_cell = 1;
-    } else if (svm_phase_levels_b[b_phase] & B_NEG1) {
-        b_1_cell = -1;
-    } else {
-        b_1_cell = 0;
-    }
+    int8_t c_9_cell = ((svm_phase_levels_c[c_phase] & C_POS9) ? 1 : 0) +
+                      ((svm_phase_levels_c[c_phase] & C_NEG9) ? -1 : 0);
+    int8_t c_3_cell = ((svm_phase_levels_c[c_phase] & C_POS3) ? 1 : 0) +
+                      ((svm_phase_levels_c[c_phase] & C_NEG3) ? -1 : 0);
+    int8_t c_1_cell = ((svm_phase_levels_c[c_phase] & C_POS1) ? 1 : 0) +
+                      ((svm_phase_levels_c[c_phase] & C_NEG1) ? -1 : 0);
 
-    int8_t buffer[10] = {
-        0xCA,
-        0xFE,
-        (int8_t)(a_phase - sizeof(svm_phase_levels_a) / 2) -
-            (b_phase - sizeof(svm_phase_levels_b) / 2),
-        (int8_t)(b_phase - sizeof(svm_phase_levels_b) / 2) -
-            (c_phase - sizeof(svm_phase_levels_c) / 2),
-        (int8_t)(c_phase - sizeof(svm_phase_levels_c) / 2) -
-            (a_phase - sizeof(svm_phase_levels_a) / 2),
-        ref_val_mv,
-        0,         // What is this? Second byte of the magnitude I think
-        b_9_cell,  // b phase 9 level
-        b_3_cell,  // b phase 3 level
-        b_1_cell   // b phase 1 level
-    };
+    int8_t buffer[20] = {65,
+                         97,
+                         (a_phase - sizeof(svm_phase_levels_a) / 2) -
+                             (b_phase - sizeof(svm_phase_levels_b) / 2),
+                         (b_phase - sizeof(svm_phase_levels_b) / 2) -
+                             (c_phase - sizeof(svm_phase_levels_c) / 2),
+                         (c_phase - sizeof(svm_phase_levels_c) / 2) -
+                             (a_phase - sizeof(svm_phase_levels_a) / 2),
+                         ref_val_a,
+                         ref_val_b,
+                         ref_val_c,
+                         a_9_cell,
+                         a_3_cell,
+                         a_1_cell,
+                         b_9_cell,
+                         b_3_cell,
+                         b_1_cell,
+                         c_9_cell,
+                         c_3_cell,
+                         c_1_cell};
 
-    UART_write(uart, buffer, 10);
+    UART_write(uart, buffer, sizeof(buffer));
 }
