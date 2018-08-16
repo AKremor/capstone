@@ -33,9 +33,9 @@
  *  ======== MSP_EXP432E401Y.cmd ========
  *  Define the memory block start/length for the MSP_EXP432E401Y M4
  */
---stack_size=1024   /* C stack is also used for ISR stack */
+--stack_size=5024   /* C stack is also used for ISR stack */
 
-HEAPSIZE = 0x30000;  /* Size of heap buffer used by HeapMem */
+HEAPSIZE = 0x20000;  /* Size of heap buffer used by HeapMem */
 
 MEMORY
 {

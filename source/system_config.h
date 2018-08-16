@@ -6,8 +6,8 @@
 #include "arm_math.h"
 
 constexpr float32_t Kp = 100;
-constexpr float32_t Ki = 0.050;
-constexpr float32_t Kd = 2;
+constexpr float32_t Ki = 10;
+constexpr float32_t Kd = 0;
 
 static const uint32_t chopper_pwm_peripheral = SYSCTL_PERIPH_PWM0;
 static const uint32_t chopper_pwm_base = PWM0_BASE;

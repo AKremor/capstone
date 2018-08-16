@@ -6,6 +6,7 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
 #include <ti/drivers/UART.h>
+#include <ti/sysbios/knl/Semaphore.h>
 #include <xdc/runtime/System.h>
 #include "arm_math.h"
 
@@ -17,8 +18,7 @@ float32_t pid_errora;
 arm_pid_instance_f32 PIDb;
 float32_t pid_errorb;
 
-arm_pid_instance_f32 PIDc;
-float32_t pid_errorc;
+int8_t buffer[20];
 
 volatile uint64_t state_counter = 0;
 
@@ -125,12 +125,6 @@ void init_board() {
 Timer_Handle system_timer;
 UART_Handle uart;
 
-enum UART_READ_STATE { SYNC1, SYNC2, IN_SYNC, FINISHED };
-
-UART_READ_STATE uart_read_state = FINISHED;
-
-void uartcallback(UART_Handle handle, void *buf, size_t count) {}
-
 int8_t read_buffer[20];
 
 void init_uart() {
@@ -143,9 +137,7 @@ void init_uart() {
     uart_params.writeDataMode = UART_DATA_BINARY;
     uart_params.baudRate = 921600;
     uart_params.readMode = UART_MODE_BLOCKING;
-    uart_params.writeMode = UART_MODE_CALLBACK;
-    uart_params.writeCallback = uartcallback;
-    // uart_params.readCallback = uartreadcallback;
+    uart_params.writeMode = UART_MODE_BLOCKING;
 
     uart = UART_open(0, &uart_params);
 }
@@ -195,10 +187,6 @@ void mainThread(void *arg0) {
     PIDb.Ki = Ki;
     PIDb.Kp = Kp;
     arm_pid_init_f32(&PIDb, 1);
-    PIDc.Kd = Kd;
-    PIDc.Ki = Ki;
-    PIDc.Kp = Kp;
-    arm_pid_init_f32(&PIDc, 1);
 
     start_chopper();
 
@@ -210,11 +198,10 @@ void mainThread(void *arg0) {
 
     init_adc();
 
-    uint32_t reading = 0;
-    // read_adc(&reading);
-
     // Update the system state from uart
     while (1) {
+        UART_write(uart, buffer, sizeof(buffer));
+
         int8_t header[1];
 
         while (true) {
@@ -236,11 +223,14 @@ void mainThread(void *arg0) {
         // Sync'd
         UART_read(uart, read_buffer, 9);
 
-        // TODO Set some values
-        int aaaa = 123;
-        load_voltage = {read_buffer[0], read_buffer[1], read_buffer[2]};
-        load_line_current = {read_buffer[3], read_buffer[4], read_buffer[5]};
-        load_ll_voltage = {read_buffer[6], read_buffer[7], read_buffer[8]};
+        load_voltage = {(float32_t)read_buffer[0], (float32_t)read_buffer[1],
+                        (float32_t)read_buffer[2]};
+        load_line_current = {(float32_t)read_buffer[3] / 64.0,
+                             (float32_t)read_buffer[4] / 64.0,
+                             (float32_t)read_buffer[5] / 64.0};
+        load_ll_voltage = {(float32_t)read_buffer[6], (float32_t)read_buffer[7],
+                           (float32_t)read_buffer[8]};
+        // Semaphore_post(hil_update);
     }
 }
 
@@ -248,12 +238,39 @@ void svm_timer_callback(Timer_Handle handle) {
     // Pretend this is magically a current even though it's really a voltage
     abc_quantity value = SineWave::getValueAbc(state_counter);
 
-    pid_errora = value.a - load_line_current.a;
-    value.a = arm_pid_f32(&PIDa, pid_errora);
-    pid_errorb = value.b - load_line_current.b;
-    value.b = arm_pid_f32(&PIDb, pid_errorb);
-    pid_errorc = value.c - load_line_current.c;
-    value.c = arm_pid_f32(&PIDa, pid_errorc);
+    float32_t sinVal = sinf(2 * PI * frequency_hz * state_counter / 1000);
+    float32_t cosVal = cosf(2 * PI * frequency_hz * state_counter / 1000);
+
+    float32_t Ialpha = 0;
+    float32_t Ibeta = 0;
+    arm_clarke_f32(value.a, value.b, &Ialpha, &Ibeta);
+    float32_t Id = 0;
+    float32_t Iq = 0;
+    arm_park_f32(Ialpha, Ibeta, &Id, &Iq, sinVal, cosVal);
+
+    float32_t Ialphasense = 0;
+    float32_t Ibetasense = 0;
+    arm_clarke_f32(load_line_current.a, load_line_current.b, &Ialphasense,
+                   &Ibetasense);
+    float32_t Idsense = 0;
+    float32_t Iqsense = 0;
+    arm_park_f32(Ialphasense, Ibetasense, &Idsense, &Iqsense, sinVal, cosVal);
+
+    pid_errora = Id - Idsense;
+    pid_errorb = Iq - Iqsense;
+    float32_t Idcontrol = arm_pid_f32(&PIDa, pid_errora);
+    float32_t Iqcontrol = arm_pid_f32(&PIDb, pid_errorb);
+
+    float32_t Ialphacontrol, Ibetacontrol;
+    arm_inv_park_f32(Idcontrol, Iqcontrol, &Ialphacontrol, &Ibetacontrol,
+                     sinVal, cosVal);
+
+    float32_t Ia, Ib, Ic;
+    arm_inv_clarke_f32(Ialphacontrol, Ibetacontrol, &Ia, &Ib);
+
+    value.a = Ia;
+    value.b = Ib;
+    value.c = -1 * (Ia + Ib);
 
     gh_quantity hex_value;
     hex_value.g = 1 / (3 * Vdc) * (2 * value.a - value.b - value.c);
@@ -368,6 +385,4 @@ void svm_timer_callback(Timer_Handle handle) {
                          c_9_cell,
                          c_3_cell,
                          c_1_cell};
-
-    UART_write(uart, buffer, sizeof(buffer));
 }
