@@ -1,3 +1,4 @@
+#include <source/chopper/chopper.h>
 #include <source/system_config.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 

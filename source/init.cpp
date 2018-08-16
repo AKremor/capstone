@@ -6,9 +6,9 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
 #include <ti/drivers/UART.h>
-#include <ti/sysbios/knl/Semaphore.h>
 #include <xdc/runtime/System.h>
 #include "arm_math.h"
+#include "assert.h"
 
 void svm_timer_callback(Timer_Handle handle);
 
@@ -19,90 +19,16 @@ arm_pid_instance_f32 PIDb;
 float32_t pid_errorb;
 
 int8_t buffer[20];
+Timer_Handle system_timer;
+UART_Handle uart;
+
+int8_t read_buffer[20];
+
+abc_quantity load_voltage = {0, 0, 0};
+abc_quantity load_line_current = {0, 0, 0};
+abc_quantity load_ll_voltage = {0, 0, 0};
 
 volatile uint64_t state_counter = 0;
-
-enum hb_pin {
-    A_POS1 = 0x01,  // PL0
-    A_OFF1 = 0x00,  // N/A
-    A_NEG1 = 0x02,  // PL1
-    A_POS3 = 0x04,  // PL2
-    A_OFF3 = 0x00,  // N/A
-    A_NEG3 = 0x08,  // PL3
-    A_POS9 = 0x10,  // PL4
-    A_OFF9 = 0x00,  // N/A
-    A_NEG9 = 0x20,  // PL5
-
-    B_POS1 = 0x01,  // PK0
-    B_OFF1 = 0x00,  // N/A
-    B_NEG1 = 0x02,  // PK1
-    B_POS3 = 0x04,  // PK2
-    B_OFF3 = 0x00,  // N/A
-    B_NEG3 = 0x08,  // PK3
-    B_POS9 = 0x10,  // PK4
-    B_OFF9 = 0x20,  // N/A
-    B_NEG9 = 0x40,  // PK5
-
-    // TODO Port
-    C_POS1 = 0x10,  // PK0
-    C_OFF1 = 0x00,  // N/A
-    C_NEG1 = 0x20,  // PK1
-    C_POS3 = 0x10,  // PK2
-    C_OFF3 = 0x00,  // N/A
-    C_NEG3 = 0x20,  // PK3
-    C_POS9 = 0x40,  // PK4
-    C_OFF9 = 0x00,  // N/A
-    C_NEG9 = 0x80,  // PK5
-
-};
-
-uint8_t svm_phase_levels_a[] = {
-    A_NEG9 | A_NEG3 | A_NEG1, A_NEG9 | A_NEG3 | A_OFF1,
-    A_NEG9 | A_NEG3 | A_POS1, A_NEG9 | A_OFF3 | A_NEG1,
-    A_NEG9 | A_OFF3 | A_OFF1, A_NEG9 | A_OFF3 | A_POS1,
-    A_NEG9 | A_POS3 | A_NEG1, A_NEG9 | A_POS3 | A_OFF1,
-    A_NEG9 | A_POS3 | A_POS1, A_OFF9 | A_NEG3 | A_NEG1,
-    A_OFF9 | A_NEG3 | A_OFF1, A_OFF9 | A_NEG3 | A_POS1,
-    A_OFF9 | A_OFF3 | A_NEG1, A_OFF9 | A_OFF3 | A_OFF1,
-    A_OFF9 | A_OFF3 | A_POS1, A_OFF9 | A_POS3 | A_NEG1,
-    A_OFF9 | A_POS3 | A_OFF1, A_OFF9 | A_POS3 | A_POS1,
-    A_POS9 | A_NEG3 | A_NEG1, A_POS9 | A_NEG3 | A_OFF1,
-    A_POS9 | A_NEG3 | A_POS1, A_POS9 | A_OFF3 | A_NEG1,
-    A_POS9 | A_OFF3 | A_OFF1, A_POS9 | A_OFF3 | A_POS1,
-    A_POS9 | A_POS3 | A_NEG1, A_POS9 | A_POS3 | A_OFF1,
-    A_POS9 | A_POS3 | A_POS1};
-
-uint8_t svm_phase_levels_b[] = {
-    B_NEG9 | B_NEG3 | B_NEG1, B_NEG9 | B_NEG3 | B_OFF1,
-    B_NEG9 | B_NEG3 | B_POS1, B_NEG9 | B_OFF3 | B_NEG1,
-    B_NEG9 | B_OFF3 | B_OFF1, B_NEG9 | B_OFF3 | B_POS1,
-    B_NEG9 | B_POS3 | B_NEG1, B_NEG9 | B_POS3 | B_OFF1,
-    B_NEG9 | B_POS3 | B_POS1, B_OFF9 | B_NEG3 | B_NEG1,
-    B_OFF9 | B_NEG3 | B_OFF1, B_OFF9 | B_NEG3 | B_POS1,
-    B_OFF9 | B_OFF3 | B_NEG1, B_OFF9 | B_OFF3 | B_OFF1,
-    B_OFF9 | B_OFF3 | B_POS1, B_OFF9 | B_POS3 | B_NEG1,
-    B_OFF9 | B_POS3 | B_OFF1, B_OFF9 | B_POS3 | B_POS1,
-    B_POS9 | B_NEG3 | B_NEG1, B_POS9 | B_NEG3 | B_OFF1,
-    B_POS9 | B_NEG3 | B_POS1, B_POS9 | B_OFF3 | B_NEG1,
-    B_POS9 | B_OFF3 | B_OFF1, B_POS9 | B_OFF3 | B_POS1,
-    B_POS9 | B_POS3 | B_NEG1, B_POS9 | B_POS3 | B_OFF1,
-    B_POS9 | B_POS3 | B_POS1};
-
-uint8_t svm_phase_levels_c[] = {
-    C_NEG9 | C_NEG3 | C_NEG1, C_NEG9 | C_NEG3 | C_OFF1,
-    C_NEG9 | C_NEG3 | C_POS1, C_NEG9 | C_OFF3 | C_NEG1,
-    C_NEG9 | C_OFF3 | C_OFF1, C_NEG9 | C_OFF3 | C_POS1,
-    C_NEG9 | C_POS3 | C_NEG1, C_NEG9 | C_POS3 | C_OFF1,
-    C_NEG9 | C_POS3 | C_POS1, C_OFF9 | C_NEG3 | C_NEG1,
-    C_OFF9 | C_NEG3 | C_OFF1, C_OFF9 | C_NEG3 | C_POS1,
-    C_OFF9 | C_OFF3 | C_NEG1, C_OFF9 | C_OFF3 | C_OFF1,
-    C_OFF9 | C_OFF3 | C_POS1, C_OFF9 | C_POS3 | C_NEG1,
-    C_OFF9 | C_POS3 | C_OFF1, C_OFF9 | C_POS3 | C_POS1,
-    C_POS9 | C_NEG3 | C_NEG1, C_POS9 | C_NEG3 | C_OFF1,
-    C_POS9 | C_NEG3 | C_POS1, C_POS9 | C_OFF3 | C_NEG1,
-    C_POS9 | C_OFF3 | C_OFF1, C_POS9 | C_OFF3 | C_POS1,
-    C_POS9 | C_POS3 | C_NEG1, C_POS9 | C_POS3 | C_OFF1,
-    C_POS9 | C_POS3 | C_POS1};
 
 void init_board() {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
@@ -122,10 +48,7 @@ void init_board() {
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
-Timer_Handle system_timer;
-UART_Handle uart;
-
-int8_t read_buffer[20];
+void uartcallback(UART_Handle handle, void *buf, size_t count) {}
 
 void init_uart() {
     UART_init();
@@ -137,7 +60,8 @@ void init_uart() {
     uart_params.writeDataMode = UART_DATA_BINARY;
     uart_params.baudRate = 921600;
     uart_params.readMode = UART_MODE_BLOCKING;
-    uart_params.writeMode = UART_MODE_BLOCKING;
+    uart_params.writeMode = UART_MODE_CALLBACK;
+    uart_params.writeCallback = uartcallback;
 
     uart = UART_open(0, &uart_params);
 }
@@ -174,10 +98,6 @@ void init_timers() {
     }
 };
 
-abc_quantity load_voltage = {0, 0, 0};
-abc_quantity load_line_current = {0, 0, 0};
-abc_quantity load_ll_voltage = {0, 0, 0};
-
 void mainThread(void *arg0) {
     PIDa.Kd = Kd;
     PIDa.Ki = Ki;
@@ -189,33 +109,32 @@ void mainThread(void *arg0) {
     arm_pid_init_f32(&PIDb, 1);
 
     start_chopper();
-
     init_uart();
-
     init_board();
-
     init_timers();
-
     init_adc();
 
     // Update the system state from uart
+
     while (1) {
-        UART_write(uart, buffer, sizeof(buffer));
+        int8_t header[1] = {NULL};
 
-        int8_t header[1];
+        bool has_sync1 = false;
 
-        while (true) {
+        while (!has_sync1) {
             if (UART_read(uart, header, 1)) {
                 if (header[0] == 'A') {
-                    break;
+                    has_sync1 = true;
                 }
             }
         }
 
-        while (true) {
+        bool has_sync2 = false;
+
+        while (!has_sync2) {
             if (UART_read(uart, header, 1)) {
                 if (header[0] == 'a') {
-                    break;
+                    has_sync2 = true;
                 }
             }
         }
@@ -225,15 +144,15 @@ void mainThread(void *arg0) {
 
         load_voltage = {(float32_t)read_buffer[0], (float32_t)read_buffer[1],
                         (float32_t)read_buffer[2]};
-        load_line_current = {(float32_t)read_buffer[3] / 64.0,
-                             (float32_t)read_buffer[4] / 64.0,
-                             (float32_t)read_buffer[5] / 64.0};
+        load_line_current = {(float32_t)(read_buffer[3] / 64.0),
+                             (float32_t)(read_buffer[4] / 64.0),
+                             (float32_t)(read_buffer[5] / 64.0)};
         load_ll_voltage = {(float32_t)read_buffer[6], (float32_t)read_buffer[7],
                            (float32_t)read_buffer[8]};
-        // Semaphore_post(hil_update);
     }
 }
 
+int32_t a_phase, b_phase, c_phase;
 void svm_timer_callback(Timer_Handle handle) {
     // Pretend this is magically a current even though it's really a voltage
     abc_quantity value = SineWave::getValueAbc(state_counter);
@@ -265,7 +184,7 @@ void svm_timer_callback(Timer_Handle handle) {
     arm_inv_park_f32(Idcontrol, Iqcontrol, &Ialphacontrol, &Ibetacontrol,
                      sinVal, cosVal);
 
-    float32_t Ia, Ib, Ic;
+    float32_t Ia, Ib;
     arm_inv_clarke_f32(Ialphacontrol, Ibetacontrol, &Ia, &Ib);
 
     value.a = Ia;
@@ -329,9 +248,33 @@ void svm_timer_callback(Timer_Handle handle) {
         k++;
     }
 
-    int32_t a_phase = k;
-    int32_t b_phase = k - nearest_1.g;
-    int32_t c_phase = k - nearest_1.g - nearest_1.h;
+    a_phase = k;
+    b_phase = k - nearest_1.g;
+    c_phase = k - nearest_1.g - nearest_1.h;
+
+    if (a_phase >= n_levels) {
+        a_phase = n_levels - 1;
+    }
+
+    if (a_phase < 0) {
+        a_phase = 0;
+    }
+
+    if (b_phase >= n_levels) {
+        b_phase = n_levels - 1;
+    }
+
+    if (b_phase < 0) {
+        b_phase = 0;
+    }
+
+    if (c_phase >= n_levels) {
+        c_phase = n_levels - 1;
+    }
+
+    if (c_phase < 0) {
+        c_phase = 0;
+    }
 
     // GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[a_phase]); // TODO
     GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[b_phase]);
@@ -367,12 +310,12 @@ void svm_timer_callback(Timer_Handle handle) {
 
     int8_t buffer[20] = {65,
                          97,
-                         (a_phase - sizeof(svm_phase_levels_a) / 2) -
-                             (b_phase - sizeof(svm_phase_levels_b) / 2),
-                         (b_phase - sizeof(svm_phase_levels_b) / 2) -
-                             (c_phase - sizeof(svm_phase_levels_c) / 2),
-                         (c_phase - sizeof(svm_phase_levels_c) / 2) -
-                             (a_phase - sizeof(svm_phase_levels_a) / 2),
+                         (int8_t)((a_phase - sizeof(svm_phase_levels_a) / 2) -
+                                  (b_phase - sizeof(svm_phase_levels_b) / 2)),
+                         (int8_t)((b_phase - sizeof(svm_phase_levels_b) / 2) -
+                                  (c_phase - sizeof(svm_phase_levels_c) / 2)),
+                         (int8_t)((c_phase - sizeof(svm_phase_levels_c) / 2) -
+                                  (a_phase - sizeof(svm_phase_levels_a) / 2)),
                          ref_val_a,
                          ref_val_b,
                          ref_val_c,
@@ -385,4 +328,5 @@ void svm_timer_callback(Timer_Handle handle) {
                          c_9_cell,
                          c_3_cell,
                          c_1_cell};
+    UART_write(uart, buffer, sizeof(buffer));
 }
