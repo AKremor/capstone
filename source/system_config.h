@@ -5,6 +5,10 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
+constexpr float32_t Kp = 100;
+constexpr float32_t Ki = 0.050;
+constexpr float32_t Kd = 2;
+
 static const uint32_t chopper_pwm_peripheral = SYSCTL_PERIPH_PWM0;
 static const uint32_t chopper_pwm_base = PWM0_BASE;
 static const uint32_t chopper_gpio_peripheral = SYSCTL_PERIPH_GPIOF;
@@ -28,7 +32,7 @@ static constexpr uint32_t n_levels = 27;
 static constexpr float32_t Vdc = 1;
 // static constexpr float32_t magnitude = 1 * 0.866 * 1.141 * ((n_levels - 1)
 // / 1.0) * Vdc;
-static constexpr float32_t magnitude = 20;
+static constexpr float32_t magnitude = 0.5;
 static constexpr float32_t frequency_hz = 20;
 
 #endif /* SRC_SYSTEM_CONFIG_H_ */

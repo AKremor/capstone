@@ -79,6 +79,7 @@
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.MSP432_18.1.linkerID.LIBRARY.667216384" name="Include library file or command file as input (--library, -l)" superClass="com.ti.ccstudio.buildDefinitions.MSP432_18.1.linkerID.LIBRARY" useByScannerDiscovery="false" valueType="libs">
 									<listOptionValue builtIn="false" value="${COM_TI_SIMPLELINK_MSP432E4_SDK_LIBRARIES}"/>
+									<listOptionValue builtIn="false" value="${COM_TI_SIMPLELINK_MSP432E4_SDK_INSTALL_DIR}/source/third_party/CMSIS/DSP_Lib/lib/ccs/m4f/arm_cortexM4lf_math.a"/>
 									<listOptionValue builtIn="false" value="ti/display/lib/display.aem4f"/>
 									<listOptionValue builtIn="false" value="ti/grlib/lib/ccs/m4f/grlib.a"/>
 									<listOptionValue builtIn="false" value="third_party/spiffs/lib/ccs/m4f/spiffs.a"/>

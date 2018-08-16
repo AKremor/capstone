@@ -11,6 +11,15 @@
 
 void svm_timer_callback(Timer_Handle handle);
 
+arm_pid_instance_f32 PIDa;
+float32_t pid_errora;
+
+arm_pid_instance_f32 PIDb;
+float32_t pid_errorb;
+
+arm_pid_instance_f32 PIDc;
+float32_t pid_errorc;
+
 volatile uint64_t state_counter = 0;
 
 enum hb_pin {
@@ -178,6 +187,19 @@ abc_quantity load_line_current = {0, 0, 0};
 abc_quantity load_ll_voltage = {0, 0, 0};
 
 void mainThread(void *arg0) {
+    PIDa.Kd = Kd;
+    PIDa.Ki = Ki;
+    PIDa.Kp = Kp;
+    arm_pid_init_f32(&PIDa, 1);
+    PIDb.Kd = Kd;
+    PIDb.Ki = Ki;
+    PIDb.Kp = Kp;
+    arm_pid_init_f32(&PIDb, 1);
+    PIDc.Kd = Kd;
+    PIDc.Ki = Ki;
+    PIDc.Kp = Kp;
+    arm_pid_init_f32(&PIDc, 1);
+
     start_chopper();
 
     init_uart();
@@ -223,7 +245,15 @@ void mainThread(void *arg0) {
 }
 
 void svm_timer_callback(Timer_Handle handle) {
-    abc_quantity v  ineWave::getValueAbc(state_counter);
+    // Pretend this is magically a current even though it's really a voltage
+    abc_quantity value = SineWave::getValueAbc(state_counter);
+
+    pid_errora = value.a - load_line_current.a;
+    value.a = arm_pid_f32(&PIDa, pid_errora);
+    pid_errorb = value.b - load_line_current.b;
+    value.b = arm_pid_f32(&PIDb, pid_errorb);
+    pid_errorc = value.c - load_line_current.c;
+    value.c = arm_pid_f32(&PIDa, pid_errorc);
 
     gh_quantity hex_value;
     hex_value.g = 1 / (3 * Vdc) * (2 * value.a - value.b - value.c);
