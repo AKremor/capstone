@@ -1,20 +1,14 @@
-#ifndef SRC_SYSTEM_CONFIG_H_
-#define SRC_SYSTEM_CONFIG_H_
+#pragma once
 
 #include <stdint.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
+constexpr bool use_hil = true;
+
 constexpr float32_t Kp = 100;
 constexpr float32_t Ki = 10;
 constexpr float32_t Kd = 0;
-
-static const uint32_t chopper_pwm_peripheral = SYSCTL_PERIPH_PWM0;
-static const uint32_t chopper_pwm_base = PWM0_BASE;
-static const uint32_t chopper_gpio_peripheral = SYSCTL_PERIPH_GPIOF;
-static const uint32_t chopper_gpio_port_base = GPIO_PORTF_BASE;
-static const uint32_t chopper_gpio_pin_ac_pos = GPIO_PIN_0;
-static const uint32_t chopper_gpio_pin_ac_neg = GPIO_PIN_1;
 
 constexpr uint32_t system_clock_mhz = 120;
 
@@ -30,8 +24,6 @@ static const uint32_t chopper_falling_dead_band_ns = 3600;
 static constexpr uint16_t svm_timer_hz = 500;
 static constexpr int32_t n_levels = 27;
 static constexpr float32_t Vdc = 1;
-// static constexpr float32_t magnitude = 1 * 0.866 * 1.141 * ((n_levels - 1)
-// / 1.0) * Vdc;
 static constexpr float32_t magnitude = 0.02;
 static constexpr float32_t frequency_hz = 20;
 
@@ -53,19 +45,18 @@ enum hb_pin {
     B_OFF3 = 0x00,  // N/A
     B_NEG3 = 0x08,  // PK3
     B_POS9 = 0x10,  // PK4
-    B_OFF9 = 0x20,  // N/A
-    B_NEG9 = 0x40,  // PK5
+    B_OFF9 = 0x00,  // N/A
+    B_NEG9 = 0x20,  // PK5
 
-    // TODO Port
-    C_POS1 = 0x10,  // PK0
+    C_POS1 = 0x01,  // PA0
     C_OFF1 = 0x00,  // N/A
-    C_NEG1 = 0x20,  // PK1
-    C_POS3 = 0x10,  // PK2
+    C_NEG1 = 0x02,  // PA1
+    C_POS3 = 0x04,  // PA2
     C_OFF3 = 0x00,  // N/A
-    C_NEG3 = 0x20,  // PK3
-    C_POS9 = 0x40,  // PK4
+    C_NEG3 = 0x08,  // PA3
+    C_POS9 = 0x10,  // PA4
     C_OFF9 = 0x00,  // N/A
-    C_NEG9 = 0x80,  // PK5
+    C_NEG9 = 0x20,  // PA5
 
 };
 
@@ -116,5 +107,3 @@ constexpr uint8_t svm_phase_levels_c[] = {
     C_POS9 | C_OFF3 | C_OFF1, C_POS9 | C_OFF3 | C_POS1,
     C_POS9 | C_POS3 | C_NEG1, C_POS9 | C_POS3 | C_OFF1,
     C_POS9 | C_POS3 | C_POS1};
-
-#endif /* SRC_SYSTEM_CONFIG_H_ */

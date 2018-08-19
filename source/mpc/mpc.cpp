@@ -1,13 +1,9 @@
 #include <math.h>
 #include <source/mpc/mpc.h>
-#include <source/mpc/switching_states.h>
-#include <ti/devices/msp432e4/driverlib/driverlib.h>
-#include <xdc/runtime/System.h>
+#include <source/system_config.h>
 #include <limits>
-//#include "arm_const_structs.h"
 
 int findOptimalSwitchingIndex(SystemState *system_state,
-                              SystemState *desired_state,
                               const PhaseVoltageLevel cell_states[n_levels],
                               LoadModel *load) {
     // Now find best option, minimisation problem
@@ -15,13 +11,18 @@ int findOptimalSwitchingIndex(SystemState *system_state,
     float best_cost_found = std::numeric_limits<float>::max();
     // TODO collapse desired state into system state
     for (int i = 0; i < n_levels; i++) {
-        SystemState prediction =
-            predictSystemState(system_state, cell_states[i], load);
+        three_phase_quantity prediction = predictSystemState(
+            system_state->load_line_current, system_state->load_voltage,
+            cell_states[i], load);
 
         float cost = 0;
-        cost += abs(prediction.current_alpha - desired_state->current_alpha);
-        cost += abs(prediction.current_beta - desired_state->current_beta);
-        cost += abs(prediction.current_zero - desired_state->current_zero);
+        // TODO Values in here
+        cost +=
+            abs(prediction.get_ab0().a - system_state->reference.get_dq0(1).d);
+        cost +=
+            abs(prediction.get_ab0().b - system_state->reference.get_dq0(1).q);
+        cost += abs(prediction.get_ab0().zero -
+                    system_state->reference.get_dq0(1).zero);
 
         if (cost < best_cost_found) {
             best_cost_found = cost;
@@ -32,30 +33,20 @@ int findOptimalSwitchingIndex(SystemState *system_state,
     return best_index_found;
 }
 
-void setGateSignals(PhaseVoltageLevel level_selection) {
-    uint8_t gpio_K = gate_signals[level_selection.a + n_levels / 2];
-    uint8_t gpio_L = gate_signals[level_selection.b + n_levels / 2];
-    uint8_t gpio_M = gate_signals[level_selection.c + n_levels / 2];
-
-    GPIOPinWrite(GPIO_PORTK_BASE, gpio_K, gpio_K);
-    GPIOPinWrite(GPIO_PORTL_BASE, gpio_L, gpio_L);
-    GPIOPinWrite(GPIO_PORTM_BASE, gpio_M, gpio_M);
-}
-
-SystemState predictSystemState(SystemState *current_state,
-                               const PhaseVoltageLevel voltage_level,
-                               LoadModel *load) {
-    // TODO alpha beta transform on voltages
-    SystemState prediction;
-    // TODO replace the 1 with v_alpha
-    prediction.current_alpha =
-        (load->L * current_state->current_alpha + load->Ts * 1) *
+three_phase_quantity predictSystemState(three_phase_quantity currents,
+                                        three_phase_quantity voltages,
+                                        const PhaseVoltageLevel voltage_level,
+                                        LoadModel *load) {
+    ab0_quantity prediction;
+    prediction.a =
+        (load->L * currents.get_ab0().a + load->Ts * voltages.get_ab0().a) *
         load->model_reciprocal_denominator;
-    prediction.current_beta =
-        (load->L * current_state->current_beta + load->Ts * 1) *
+    prediction.b =
+        (load->L * currents.get_ab0().b + load->Ts * voltages.get_ab0().b) *
         load->model_reciprocal_denominator;
+    prediction.zero = 0;
 
-    prediction.current_zero = 0;
-
-    return prediction;
+    three_phase_quantity out;
+    out.set_ab0(prediction);
+    return out;
 }

@@ -1,3 +1,4 @@
+#include <source/quantities.h>
 #include <source/reference_signal/sine_wave.h>
 #include <source/system_config.h>
 #include "arm_math.h"

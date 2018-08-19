@@ -1,12 +1,6 @@
-#include <source/mpc/switching_states.h>
+#include <source/quantities.h>
+#include <source/system_state.h>
 #include "arm_math.h"
-
-class SystemState {
-   public:
-    float32_t current_alpha;
-    float32_t current_beta;
-    float32_t current_zero;
-};
 
 class LoadModel {
    public:
@@ -17,13 +11,11 @@ class LoadModel {
     float32_t model_reciprocal_denominator;
 };
 
-SystemState predictSystemState(SystemState *current_state,
-                               const PhaseVoltageLevel voltage_level,
-                               LoadModel *load);
+three_phase_quantity predictSystemState(three_phase_quantity currents,
+                                        three_phase_quantity voltages,
+                                        const PhaseVoltageLevel voltage_level,
+                                        LoadModel *load);
 
-int findOptimalSwitchingIndex(SystemState *system_state,
-                              SystemState *desired_state,
-                              const PhaseVoltageLevel cell_states[n_levels],
-                              LoadModel *load);
+int findOptimalSwitchingIndex(SystemState *system_state, LoadModel *load);
 
 void setGateSignals(PhaseVoltageLevel level_selection);
