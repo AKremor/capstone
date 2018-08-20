@@ -3,23 +3,19 @@
 #include <source/system_config.h>
 #include "arm_math.h"
 
-abc_quantity svm_modulator(SystemState state, float32_t d, float32_t q,
-                           float32_t sin_value, float32_t cos_value) {
+abc_quantity svm_modulator(float32_t d, float32_t q, float32_t sin_value,
+                   float32_t cos_value) {
     float32_t Ialphacontrol, Ibetacontrol;
 
     arm_inv_park_f32(d, q, &Ialphacontrol, &Ibetacontrol, sin_value, cos_value);
 
-    float32_t Ia, Ib;
+    float32_t Ia, Ib, Ic;
     arm_inv_clarke_f32(Ialphacontrol, Ibetacontrol, &Ia, &Ib);
+    Ic = -1.0 * (Ia + Ib);
 
     gh_quantity hex_value;
-    hex_value.g = 1 / (3 * Vdc) *
-                  (2 * state.reference.get_abc().a -
-                   state.reference.get_abc().b - state.reference.get_abc().c);
-    hex_value.h =
-        1 / (3 * Vdc) *
-        (-1 * state.reference.get_abc().a + 2 * state.reference.get_abc().b -
-         state.reference.get_abc().c);
+    hex_value.g = 1 / (3 * Vdc) * (2 * Ia - Ib - Ic);
+    hex_value.h = 1 / (3 * Vdc) * (-1 * Ia + 2 * Ib - Ic);
 
     // Ordered ul, lu, uu, ll
     gh_quantity nodes[4] = {NULL};
@@ -103,8 +99,5 @@ abc_quantity svm_modulator(SystemState state, float32_t d, float32_t q,
         c_phase = 0;
     }
 
-    abc_quantity phase_indices = {a_phase, b_phase, c_phase};
-
-    // Index into the phase level array (so [0, n_levels-1])
-    return phase_indices;
+    return {a_phase, b_phase, c_phase};
 }

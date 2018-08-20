@@ -6,8 +6,8 @@
 
 constexpr bool use_hil = true;
 
-constexpr float32_t Kp = 100;
-constexpr float32_t Ki = 10;
+constexpr float32_t Kp = 1;
+constexpr float32_t Ki = 1;
 constexpr float32_t Kd = 0;
 
 constexpr uint32_t system_clock_mhz = 120;

@@ -176,8 +176,8 @@ UARTMSP432E4_Object uartMSP432Objects[Board_UARTCOUNT];
 unsigned char uartMSP432E4RingBuffer[Board_UARTCOUNT][32];
 
 const UARTMSP432E4_HWAttrs uartMSP432E4HWAttrs[] = {
-    {.baseAddr = UART0_BASE,
-     .intNum = INT_UART0,
+    {.baseAddr = UART2_BASE,
+     .intNum = INT_UART2,
      .intPriority = (~0),
      .flowControl = UARTMSP432E4_FLOWCTRL_NONE,
      .ringBufPtr = uartMSP432E4RingBuffer[0],

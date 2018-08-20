@@ -6,6 +6,7 @@
 #include <source/reference_signal/sine_wave.h>
 #include <source/svm/svm.h>
 #include <source/system_config.h>
+#include <source/system_state.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
 #include <xdc/runtime/System.h>
@@ -79,7 +80,7 @@ void init_timers() {
     }
 };
 
-void mainThread(void *arg0) {
+void mainThread(void* arg0) {
     PID_d.Kd = Kd;
     PID_d.Ki = Ki;
     PID_d.Kp = Kp;
@@ -96,22 +97,24 @@ void mainThread(void *arg0) {
     init_adc();
 
     while (1) {
+        send_state_to_simulator();
+
         receive_state_from_simulator();
 
         if (use_hil) {
             svm_control_loop(NULL);
         }
-
-        send_state_to_simulator(state);
     }
 }
 
 void svm_control_loop(Timer_Handle handle) {
     // Timer handle not used so can be made NULL
+    SystemState* state = SystemState::get();
 
     // Pretend this is magically a current even though it's really a voltage
     abc_quantity value = SineWave::getValueAbc(state_counter);
 
+    state->reference.set_abc(value);
     float32_t sinVal = sinf(2 * PI * frequency_hz * state_counter / 1000);
     float32_t cosVal = cosf(2 * PI * frequency_hz * state_counter / 1000);
 
@@ -124,8 +127,8 @@ void svm_control_loop(Timer_Handle handle) {
 
     float32_t Ialphasense = 0;
     float32_t Ibetasense = 0;
-    arm_clarke_f32(state.load_line_current.get_abc().a,
-                   state.load_line_current.get_abc().b, &Ialphasense,
+    arm_clarke_f32(state->load_line_current.get_abc().a,
+                   state->load_line_current.get_abc().b, &Ialphasense,
                    &Ibetasense);
     float32_t Idsense = 0;
     float32_t Iqsense = 0;
@@ -136,12 +139,30 @@ void svm_control_loop(Timer_Handle handle) {
     float32_t Idcontrol = arm_pid_f32(&PID_d, pid_error.d);
     float32_t Iqcontrol = arm_pid_f32(&PID_q, pid_error.q);
 
-    abc_quantity phase_indices =
-        svm_modulator(state, Idcontrol, Iqcontrol, sinVal, cosVal);
+    // Anti windup
+    if (PID_d.state[2] > n_levels) {
+        PID_d.state[2] = n_levels;
+    }
+    if (PID_d.state[2] < 0) {
+        PID_d.state[2] = 0;
+    }
 
-    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state.a_phase]);
-    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state.b_phase]);
-    GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state.c_phase]);
+    if (PID_q.state[2] > n_levels) {
+        PID_q.state[2] = n_levels;
+    }
+    if (PID_q.state[2] < 0) {
+        PID_q.state[2] = 0;
+    }
+
+    abc_quantity levels = svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal);
+
+    state->a_phase = levels.a;
+    state->b_phase = levels.b;
+    state->c_phase = levels.c;
+
+    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state->a_phase]);
+    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
+    GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
 
     state_counter++;
 }
