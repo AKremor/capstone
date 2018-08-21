@@ -97,30 +97,17 @@ void mainThread(void* arg0) {
     init_timers();
     init_adc();
 
-    while (1) {
+    while (use_hil) {
         send_state_to_simulator();
-
         receive_state_from_simulator();
 
-        if (use_hil) {
-            svm_control_loop(NULL);
-        }
+        svm_control_loop(NULL);
     }
 }
 
 void svm_control_loop(Timer_Handle handle) {
     // Timer handle not used so can be made NULL
     SystemState* state = SystemState::get();
-
-    LoadModel load = {0, 50, 10e-3, 1e-6, 0};
-    load.model_reciprocal_denominator = 1.0 / (load.R * load.Ts + load.L);
-
-    PhaseVoltageLevel optimal_level = findOptimalSwitchingIndex(state, &load);
-    state->a_phase = optimal_level.a;
-    state->b_phase = optimal_level.b;
-    state->c_phase = optimal_level.c;
-
-    return;
 
     // Pretend this is magically a current even though it's really a voltage
     abc_quantity value = SineWave::getValueAbc(state_counter);
@@ -147,8 +134,14 @@ void svm_control_loop(Timer_Handle handle) {
 
     dq0_quantity pid_error = {Id - Idsense, Iq - Iqsense, 0};
 
-    float32_t Idcontrol = arm_pid_f32(&PID_d, pid_error.d);
-    float32_t Iqcontrol = arm_pid_f32(&PID_q, pid_error.q);
+    float32_t Idcontrol, Iqcontrol;
+    if (use_closed_loop) {
+        Idcontrol = arm_pid_f32(&PID_d, pid_error.d);
+        Iqcontrol = arm_pid_f32(&PID_q, pid_error.q);
+    } else {
+        Idcontrol = Id;
+        Iqcontrol = Iq;
+    }
 
     // Anti windup
     if (PID_d.state[2] > n_levels) {
