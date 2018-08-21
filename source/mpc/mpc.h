@@ -16,6 +16,5 @@ three_phase_quantity predictSystemState(three_phase_quantity currents,
                                         const PhaseVoltageLevel voltage_level,
                                         LoadModel *load);
 
-int findOptimalSwitchingIndex(SystemState *system_state, LoadModel *load);
-
-void setGateSignals(PhaseVoltageLevel level_selection);
+PhaseVoltageLevel findOptimalSwitchingIndex(SystemState *system_state,
+                                            LoadModel *load);

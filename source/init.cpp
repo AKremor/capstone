@@ -2,6 +2,7 @@
 #include <source/hal/Board.h>
 #include <source/hal/adc.h>
 #include <source/hal/hil.h>
+#include <source/mpc/mpc.h>
 #include <source/quantities.h>
 #include <source/reference_signal/sine_wave.h>
 #include <source/svm/svm.h>
@@ -110,6 +111,16 @@ void mainThread(void* arg0) {
 void svm_control_loop(Timer_Handle handle) {
     // Timer handle not used so can be made NULL
     SystemState* state = SystemState::get();
+
+    LoadModel load = {0, 50, 10e-3, 1e-6, 0};
+    load.model_reciprocal_denominator = 1.0 / (load.R * load.Ts + load.L);
+
+    PhaseVoltageLevel optimal_level = findOptimalSwitchingIndex(state, &load);
+    state->a_phase = optimal_level.a;
+    state->b_phase = optimal_level.b;
+    state->c_phase = optimal_level.c;
+
+    return;
 
     // Pretend this is magically a current even though it's really a voltage
     abc_quantity value = SineWave::getValueAbc(state_counter);

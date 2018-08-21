@@ -27,9 +27,9 @@ struct gh_quantity {
 
 class PhaseVoltageLevel {
    public:
-    uint32_t a;
-    uint32_t b;
-    uint32_t c;
+    int32_t a;
+    int32_t b;
+    int32_t c;
 };
 
 class three_phase_quantity {
