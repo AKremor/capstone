@@ -34,7 +34,7 @@ class PhaseVoltageLevel {
 
 class three_phase_quantity {
    public:
-    abc_quantity get_abc() { return this->quantity; }
+    abc_quantity get_abc() { return quantity; }
     ab0_quantity get_ab0() {
         ab0_quantity value = {0, 0, 0};
 

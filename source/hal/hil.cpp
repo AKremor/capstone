@@ -102,26 +102,36 @@ void send_state_to_simulator() {
     int8_t c_1_cell = ((svm_phase_levels_c[state->c_phase] & C_POS1) ? 1 : 0) +
                       ((svm_phase_levels_c[state->c_phase] & C_NEG1) ? -1 : 0);
 
-    int8_t buffer[20] = {
-        65,
-        97,
+    abc_quantity load_voltage = state->load_voltage.get_abc();
+    int8_t load_voltage_an = (int8_t)(load_voltage.a * 2);
+    int8_t load_voltage_bn = (int8_t)(load_voltage.b * 2);
+    int8_t load_voltage_cn = (int8_t)(load_voltage.c * 2);
+
+    int8_t buffer[23] = {
+        65,  // 0
+        97,  // 1
         (int8_t)((state->a_phase - sizeof(svm_phase_levels_a) / 2) -
-                 (state->b_phase - sizeof(svm_phase_levels_b) / 2)),
+                 (state->b_phase - sizeof(svm_phase_levels_b) / 2)),  // 2
         (int8_t)((state->b_phase - sizeof(svm_phase_levels_b) / 2) -
-                 (state->c_phase - sizeof(svm_phase_levels_c) / 2)),
+                 (state->c_phase - sizeof(svm_phase_levels_c) / 2)),  // 3
         (int8_t)((state->c_phase - sizeof(svm_phase_levels_c) / 2) -
-                 (state->a_phase - sizeof(svm_phase_levels_a) / 2)),
-        ref_val_a,
-        ref_val_b,
-        ref_val_c,
-        a_9_cell,
-        a_3_cell,
-        a_1_cell,
-        b_9_cell,
-        b_3_cell,
-        b_1_cell,
-        c_9_cell,
-        c_3_cell,
-        c_1_cell};
+                 (state->a_phase - sizeof(svm_phase_levels_a) / 2)),  // 4
+        ref_val_a,                                                    // 5
+        ref_val_b,                                                    // 6
+        ref_val_c,                                                    // 7
+        a_9_cell,                                                     // 8
+        a_3_cell,                                                     // 9
+        a_1_cell,                                                     // 10
+        b_9_cell,                                                     // 11
+        b_3_cell,                                                     // 12
+        b_1_cell,                                                     // 13
+        c_9_cell,                                                     // 14
+        c_3_cell,                                                     // 15
+        c_1_cell,                                                     // 16
+        load_voltage_an,                                               // 17
+        load_voltage_bn,                                               // 18
+        load_voltage_cn                                                // 19
+    };
+
     UART_write(uart, buffer, sizeof(buffer));
 }

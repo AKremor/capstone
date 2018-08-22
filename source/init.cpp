@@ -23,7 +23,7 @@ Timer_Handle system_timer;
 
 volatile uint64_t state_counter = 0;
 
-void init_board() {
+void init_hbridge_io() {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOL)))
         ;
@@ -49,7 +49,7 @@ void init_board() {
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
-void init_timers() {
+void init_svm_timer() {
     Timer_init();
 
     Timer_Handle timer0;
@@ -63,21 +63,8 @@ void init_timers() {
 
     timer0 = Timer_open(Board_TIMER0, &params);
 
-    if (!use_hil && Timer_start(timer0) == Timer_STATUS_ERROR) {
+    if (use_svm_timer && Timer_start(timer0) == Timer_STATUS_ERROR) {
         System_abort("SVM timer did not start");
-    }
-
-    Timer_Params system_timer_params;
-
-    Timer_Params_init(&system_timer_params);
-    system_timer_params.period = 2 ^ 32 - 1;
-    system_timer_params.periodUnits = Timer_PERIOD_COUNTS;
-    system_timer_params.timerMode = Timer_FREE_RUNNING;
-
-    system_timer = Timer_open(Board_TIMER1, &system_timer_params);
-
-    if (Timer_start(system_timer) == Timer_STATUS_ERROR) {
-        System_abort("System timer did not start");
     }
 };
 
@@ -93,15 +80,28 @@ void mainThread(void* arg0) {
 
     start_chopper();
     init_hil();
-    init_board();
-    init_timers();
+    init_hbridge_io();
+    init_svm_timer();
     init_adc();
 
-    while (use_hil) {
-        send_state_to_simulator();
-        receive_state_from_simulator();
+    SystemState* state = SystemState::get();
+    float32_t adc_readings[2];
 
-        svm_control_loop(NULL);
+    while (1) {
+        send_state_to_simulator();
+
+        if (use_hil) {
+            receive_state_from_simulator();
+        }
+
+        if (!use_svm_timer) {
+            svm_control_loop(NULL);
+        }
+
+        // Sample ADC
+        read_adc(adc_readings);
+        abc_quantity quantity = {adc_readings[0] * 10, 10 * adc_readings[1], 0};
+        state->load_voltage.set_abc(quantity);
     }
 }
 
@@ -158,7 +158,8 @@ void svm_control_loop(Timer_Handle handle) {
         PID_q.state[2] = 0;
     }
 
-    abc_quantity levels = svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal);
+    PhaseVoltageLevel levels =
+        svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal);
 
     state->a_phase = levels.a;
     state->b_phase = levels.b;
