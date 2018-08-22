@@ -5,6 +5,8 @@
 
 UART_Handle uart;
 
+void uartcallback(UART_Handle handle, void* buf, size_t count) {}
+
 void receive_state_from_simulator() {
     SystemState* state = SystemState::get();
     int8_t read_buffer[20];
@@ -67,9 +69,10 @@ void init_hil() {
     uart_params.writeDataMode = UART_DATA_BINARY;
     uart_params.baudRate = 921600;
     uart_params.readMode = UART_MODE_BLOCKING;
-    uart_params.writeMode = UART_MODE_BLOCKING;
+    uart_params.writeMode = UART_MODE_CALLBACK;
     uart_params.writeTimeout = 1000;
     uart_params.readTimeout = 1000;
+    uart_params.writeCallback = uartcallback;
 
     uart = UART_open(0, &uart_params);
 }
@@ -107,6 +110,11 @@ void send_state_to_simulator() {
     int8_t load_voltage_bn = (int8_t)(load_voltage.b * 2);
     int8_t load_voltage_cn = (int8_t)(load_voltage.c * 2);
 
+    abc_quantity load_ll_current = state->load_line_current.get_abc();
+    int8_t load_ll_current_a = (int8_t)(load_ll_current.a * 20);
+    int8_t load_ll_current_b = (int8_t)(load_ll_current.b * 20);
+    int8_t load_ll_current_c = (int8_t)(load_ll_current.c * 20);
+
     int8_t buffer[23] = {
         65,  // 0
         97,  // 1
@@ -128,9 +136,12 @@ void send_state_to_simulator() {
         c_9_cell,                                                     // 14
         c_3_cell,                                                     // 15
         c_1_cell,                                                     // 16
-        load_voltage_an,                                               // 17
-        load_voltage_bn,                                               // 18
-        load_voltage_cn                                                // 19
+        load_voltage_an,                                              // 17
+        load_voltage_bn,                                              // 18
+        load_voltage_cn,                                              // 19
+        load_ll_current_a,                                            // 20
+        load_ll_current_b,                                            // 21
+        load_ll_current_c                                             // 22
     };
 
     UART_write(uart, buffer, sizeof(buffer));

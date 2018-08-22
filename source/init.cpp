@@ -85,7 +85,7 @@ void mainThread(void* arg0) {
     init_adc();
 
     SystemState* state = SystemState::get();
-    float32_t adc_readings[2];
+    float32_t adc_readings[5];
 
     while (1) {
         send_state_to_simulator();
@@ -102,6 +102,10 @@ void mainThread(void* arg0) {
         read_adc(adc_readings);
         abc_quantity quantity = {adc_readings[0] * 10, 10 * adc_readings[1], 0};
         state->load_voltage.set_abc(quantity);
+
+        abc_quantity quantity_current = {
+            adc_readings[2] * 10, 10 * adc_readings[3], 10 * adc_readings[4]};
+        state->load_line_current.set_abc(quantity_current);
     }
 }
 
@@ -123,10 +127,10 @@ void svm_control_loop(Timer_Handle handle) {
     float32_t Iq = 0;
     arm_park_f32(Ialpha, Ibeta, &Id, &Iq, sinVal, cosVal);
 
+    abc_quantity load_line_current = state->load_line_current.get_abc();
     float32_t Ialphasense = 0;
     float32_t Ibetasense = 0;
-    arm_clarke_f32(state->load_line_current.get_abc().a,
-                   state->load_line_current.get_abc().b, &Ialphasense,
+    arm_clarke_f32(load_line_current.a, load_line_current.b, &Ialphasense,
                    &Ibetasense);
     float32_t Idsense = 0;
     float32_t Iqsense = 0;
