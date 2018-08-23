@@ -51,7 +51,7 @@ while(1)
     load_Vxn_sensed = fread(s,3,'int8'); 
     load_Vxn_sensed = load_Vxn_sensed / 10;
     load_IXx_sensed = fread(s,3,'int8'); 
-    load_IXx_sensed = load_IXx_sensed / 20;
+    load_IXx_sensed = load_IXx_sensed / 64;
     
     ref = ref(1);
     % Reassemble the reference

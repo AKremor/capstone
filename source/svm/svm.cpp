@@ -2,6 +2,7 @@
 #include <source/svm/svm.h>
 #include <source/system_config.h>
 #include "arm_math.h"
+#include "assert.h"
 
 PhaseVoltageLevel svm_modulator(float32_t d, float32_t q, float32_t sin_value,
                                 float32_t cos_value) {
@@ -47,6 +48,8 @@ PhaseVoltageLevel svm_modulator(float32_t d, float32_t q, float32_t sin_value,
         }
     }
 
+    assert(min_index >= 0);
+    assert(min_index < 4);
     gh_quantity nearest_1 = nodes[min_index];
 
     // Now we need to find an available voltage state.
@@ -63,7 +66,7 @@ PhaseVoltageLevel svm_modulator(float32_t d, float32_t q, float32_t sin_value,
             constraints_satisfied = true;
             break;
         }
-        if (k >= n - 1) {
+        if (k >= n_levels) {
             // Saturation/error in modulator
             break;
         }
@@ -74,7 +77,7 @@ PhaseVoltageLevel svm_modulator(float32_t d, float32_t q, float32_t sin_value,
     int32_t b_phase = k - nearest_1.g;
     int32_t c_phase = k - nearest_1.g - nearest_1.h;
 
-    // Ensure no levels are saturating
+    // Ensure no levels are saturating, these are indexes into the svm array
     if (a_phase >= n_levels) {
         a_phase = n_levels - 1;
     }
@@ -99,5 +102,6 @@ PhaseVoltageLevel svm_modulator(float32_t d, float32_t q, float32_t sin_value,
         c_phase = 0;
     }
 
+    // Array indices, not actual voltages
     return {a_phase, b_phase, c_phase};
 }

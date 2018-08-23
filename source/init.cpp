@@ -19,8 +19,6 @@ arm_pid_instance_f32 PID_q;
 
 Timer_Handle system_timer;
 
-volatile uint64_t state_counter = 0;
-
 void init_hbridge_io() {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOL)))
@@ -99,25 +97,29 @@ void mainThread(void* arg0) {
         read_adc(adc_readings);
 
         // Bias current readings appropriately
-        abc_quantity quantity_current = {2 * (adc_readings[0] - 1.6f),
-                                         2 * (adc_readings[1] - 1.6f),
-                                         2 * (adc_readings[2] - 1.6f)};
+        abc_quantity quantity_current = {2 * (adc_readings[0] - 1.65f),
+                                         2 * (adc_readings[1] - 1.65f),
+                                         2 * (adc_readings[2] - 1.65f)};
         state->load_line_current.set_abc(quantity_current);
     }
 }
 
 void svm_control_loop(Timer_Handle handle) {
+    static volatile uint64_t state_counter = 0;
+
     // Timer handle not used so can be made NULL
     SystemState* state = SystemState::get();
 
-    abc_quantity value = SineWave::getValueAbc(state_counter);
+    abc_quantity reference_value = SineWave::getValueAbc(state_counter);
 
-    state->reference.set_abc(value);
-    float32_t sinVal = sinf(2 * PI * frequency_hz * state_counter / 1000);
-    float32_t cosVal = cosf(2 * PI * frequency_hz * state_counter / 1000);
+    state->reference.set_abc(reference_value);
+    float32_t sinVal =
+        sinf(2.0 * PI * frequency_hz * state_counter / svm_timer_hz);
+    float32_t cosVal =
+        cosf(2.0 * PI * frequency_hz * state_counter / svm_timer_hz);
 
     float32_t Ialpha = 0, Ibeta = 0;
-    arm_clarke_f32(value.a, value.b, &Ialpha, &Ibeta);
+    arm_clarke_f32(reference_value.a, reference_value.b, &Ialpha, &Ibeta);
 
     float32_t Id = 0, Iq = 0;
     arm_park_f32(Ialpha, Ibeta, &Id, &Iq, sinVal, cosVal);
@@ -142,23 +144,15 @@ void svm_control_loop(Timer_Handle handle) {
         Iqcontrol = Iq;
     }
 
-    // Anti integrator windup
-    if (PID_d.state[2] > n_levels) {
-        PID_d.state[2] = n_levels;
-    }
-    if (PID_d.state[2] < 0) {
-        PID_d.state[2] = 0;
-    }
-
-    if (PID_q.state[2] > n_levels) {
-        PID_q.state[2] = n_levels;
-    }
-    if (PID_q.state[2] < 0) {
-        PID_q.state[2] = 0;
-    }
-
     PhaseVoltageLevel levels =
         svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal);
+
+    assert(levels.a >= 0);
+    assert(levels.a < n_levels);
+    assert(levels.b >= 0);
+    assert(levels.b < n_levels);
+    assert(levels.c >= 0);
+    assert(levels.c < n_levels);
 
     state->a_phase = levels.a;
     state->b_phase = levels.b;
