@@ -2,7 +2,6 @@
 #include <source/hal/Board.h>
 #include <source/hal/adc.h>
 #include <source/hal/hil.h>
-#include <source/mpc/mpc.h>
 #include <source/quantities.h>
 #include <source/reference_signal/sine_wave.h>
 #include <source/svm/svm.h>
@@ -12,7 +11,6 @@
 #include <ti/drivers/Timer.h>
 #include <xdc/runtime/System.h>
 #include "arm_math.h"
-#include "assert.h"
 
 void svm_control_loop(Timer_Handle handle);
 
@@ -98,13 +96,12 @@ void mainThread(void* arg0) {
             svm_control_loop(NULL);
         }
 
-        // Sample ADC
         read_adc(adc_readings);
-        abc_quantity quantity = {adc_readings[0] * 10, 10 * adc_readings[1], 0};
-        state->load_voltage.set_abc(quantity);
 
-        abc_quantity quantity_current = {
-            adc_readings[2] * 10, 10 * adc_readings[3], 10 * adc_readings[4]};
+        // Bias current readings appropriately
+        abc_quantity quantity_current = {2 * (adc_readings[0] - 1.6f),
+                                         2 * (adc_readings[1] - 1.6f),
+                                         2 * (adc_readings[2] - 1.6f)};
         state->load_line_current.set_abc(quantity_current);
     }
 }
@@ -113,27 +110,25 @@ void svm_control_loop(Timer_Handle handle) {
     // Timer handle not used so can be made NULL
     SystemState* state = SystemState::get();
 
-    // Pretend this is magically a current even though it's really a voltage
     abc_quantity value = SineWave::getValueAbc(state_counter);
 
     state->reference.set_abc(value);
     float32_t sinVal = sinf(2 * PI * frequency_hz * state_counter / 1000);
     float32_t cosVal = cosf(2 * PI * frequency_hz * state_counter / 1000);
 
-    float32_t Ialpha = 0;
-    float32_t Ibeta = 0;
+    float32_t Ialpha = 0, Ibeta = 0;
     arm_clarke_f32(value.a, value.b, &Ialpha, &Ibeta);
-    float32_t Id = 0;
-    float32_t Iq = 0;
+
+    float32_t Id = 0, Iq = 0;
     arm_park_f32(Ialpha, Ibeta, &Id, &Iq, sinVal, cosVal);
 
     abc_quantity load_line_current = state->load_line_current.get_abc();
-    float32_t Ialphasense = 0;
-    float32_t Ibetasense = 0;
+
+    float32_t Ialphasense = 0, Ibetasense = 0;
     arm_clarke_f32(load_line_current.a, load_line_current.b, &Ialphasense,
                    &Ibetasense);
-    float32_t Idsense = 0;
-    float32_t Iqsense = 0;
+
+    float32_t Idsense = 0, Iqsense = 0;
     arm_park_f32(Ialphasense, Ibetasense, &Idsense, &Iqsense, sinVal, cosVal);
 
     dq0_quantity pid_error = {Id - Idsense, Iq - Iqsense, 0};
@@ -147,7 +142,7 @@ void svm_control_loop(Timer_Handle handle) {
         Iqcontrol = Iq;
     }
 
-    // Anti windup
+    // Anti integrator windup
     if (PID_d.state[2] > n_levels) {
         PID_d.state[2] = n_levels;
     }

@@ -106,9 +106,9 @@ void send_state_to_simulator() {
                       ((svm_phase_levels_c[state->c_phase] & C_NEG1) ? -1 : 0);
 
     abc_quantity load_voltage = state->load_voltage.get_abc();
-    int8_t load_voltage_an = (int8_t)(load_voltage.a * 2);
-    int8_t load_voltage_bn = (int8_t)(load_voltage.b * 2);
-    int8_t load_voltage_cn = (int8_t)(load_voltage.c * 2);
+    int8_t load_voltage_an = (int8_t)(load_voltage.a * 10);
+    int8_t load_voltage_bn = (int8_t)(load_voltage.b * 10);
+    int8_t load_voltage_cn = (int8_t)(load_voltage.c * 10);
 
     abc_quantity load_ll_current = state->load_line_current.get_abc();
     int8_t load_ll_current_a = (int8_t)(load_ll_current.a * 20);

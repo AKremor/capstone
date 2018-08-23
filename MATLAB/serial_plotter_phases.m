@@ -3,7 +3,7 @@ clear all;
 close all;
 
 
-s = serial('COM16', 'BaudRate', 921600);
+s = serial('COM5', 'BaudRate', 921600);
 fopen(s);
 cleanupObj = onCleanup(@() cleanUpSerial(s));
 
@@ -49,7 +49,7 @@ while(1)
     B = fread(s,3,'int8'); 
     B = fread(s,3,'int8');
     load_Vxn_sensed = fread(s,3,'int8'); 
-    load_Vxn_sensed = load_Vxn_sensed / 2;
+    load_Vxn_sensed = load_Vxn_sensed / 10;
     load_IXx_sensed = fread(s,3,'int8'); 
     load_IXx_sensed = load_IXx_sensed / 20;
     

@@ -48,6 +48,7 @@ class three_phase_quantity {
     }
     dq0_quantity get_dq0(float32_t wt) {
         // TODO
+        assert(0);
         dq0_quantity remove = {0, 0, 0};
         return remove;
     }
@@ -72,6 +73,7 @@ class three_phase_quantity {
     }
     void set_dq0(dq0_quantity quantity, float32_t wt) {
         // TODO
+        assert(0);
     }
     void set_gh(gh_quantity quantity) {
         // TODO
