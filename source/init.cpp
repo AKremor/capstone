@@ -7,6 +7,7 @@
 #include <source/svm/svm.h>
 #include <source/system_config.h>
 #include <source/system_state.h>
+#include <stdio.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include <ti/drivers/Timer.h>
 #include <xdc/runtime/System.h>
@@ -81,7 +82,8 @@ void mainThread(void* arg0) {
     init_adc();
 
     SystemState* state = SystemState::get();
-    float32_t adc_readings[5];
+
+    FILE* fp = fopen("adc.csv", "w+b");
 
     while (1) {
         send_state_to_simulator();
@@ -93,22 +95,23 @@ void mainThread(void* arg0) {
         if (!use_svm_timer) {
             svm_control_loop(NULL);
         }
-
-        read_adc(adc_readings);
-
-        // Bias current readings appropriately
-        abc_quantity quantity_current = {2 * (adc_readings[0] - 1.65f),
-                                         2 * (adc_readings[1] - 1.65f),
-                                         2 * (adc_readings[2] - 1.65f)};
-        state->load_line_current.set_abc(quantity_current);
     }
 }
 
 void svm_control_loop(Timer_Handle handle) {
-    static volatile uint64_t state_counter = 0;
-
     // Timer handle not used so can be made NULL
     SystemState* state = SystemState::get();
+
+    float32_t adc_readings[5];
+    read_adc(adc_readings);
+
+    // Bias current readings appropriately
+    abc_quantity quantity_current = {2 * (adc_readings[0] - 1.6f),
+                                     2 * (adc_readings[1] - 1.6f),
+                                     2 * (adc_readings[2] - 1.6f)};
+    state->load_line_current.set_abc(quantity_current);
+
+    static volatile uint64_t state_counter = 0;
 
     abc_quantity reference_value = SineWave::getValueAbc(state_counter);
 
@@ -143,6 +146,9 @@ void svm_control_loop(Timer_Handle handle) {
         Idcontrol = Id;
         Iqcontrol = Iq;
     }
+
+    state->control_output = {Idcontrol, Iqcontrol, 0};
+    state->pid_error = pid_error;
 
     PhaseVoltageLevel levels =
         svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal);

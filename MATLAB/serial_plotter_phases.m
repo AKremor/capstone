@@ -31,6 +31,14 @@ figure
 load_IAa_sensed = animatedline;
 title("Load IAa sensor")
 
+figure
+control_output_d = animatedline;
+title("control_output_d")
+
+figure
+pid_error_d = animatedline;
+title("pid_error_d")
+
 
 while(1)
     
@@ -53,6 +61,11 @@ while(1)
     load_IXx_sensed = fread(s,3,'int8'); 
     load_IXx_sensed = load_IXx_sensed / 64;
     
+    control_output = fread(s,3,'int8'); 
+    control_output = control_output / 10;
+    pid_error = fread(s,3,'int8'); 
+    pid_error = pid_error / 20;
+    
     ref = ref(1);
     % Reassemble the reference
     reference_value = ref / 1;
@@ -74,8 +87,16 @@ while(1)
     xlim([t-200,t+200])
     axis 'auto y'
 
-    addpoints(load_IAa_sensed, t, load_IXx_sensed(1))
-    xlim([t-200,t+200])
+    addpoints(load_IAa_sensed, t, load_IXx_sensed(2))
+    xlim([t-500,t+500])
+    axis 'auto y'
+    
+    addpoints(control_output_d, t, control_output(2))
+    xlim([t-500,t+500])
+    axis 'auto y'
+    
+    addpoints(pid_error_d, t, pid_error(2))
+    xlim([t-500,t+500])
     axis 'auto y'
     
     drawnow

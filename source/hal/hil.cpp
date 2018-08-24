@@ -112,7 +112,7 @@ void send_state_to_simulator() {
     int8_t load_ll_current_b = (int8_t)(load_ll_current.b * 64);
     int8_t load_ll_current_c = (int8_t)(load_ll_current.c * 64);
 
-    int8_t buffer[23] = {
+    int8_t buffer[29] = {
         65,  // 0
         97,  // 1
         (int8_t)((state->a_phase - sizeof(svm_phase_levels_a) / 2) -
@@ -138,7 +138,13 @@ void send_state_to_simulator() {
         load_voltage_cn,                                              // 19
         load_ll_current_a,                                            // 20
         load_ll_current_b,                                            // 21
-        load_ll_current_c                                             // 22
+        load_ll_current_c,                                            // 22
+        state->control_output.d * 10,                                 // 23
+        state->control_output.q * 10,                                 // 24
+        state->control_output.zero * 10,                              // 25
+        state->pid_error.d * 20,                                      // 26
+        state->pid_error.q * 20,                                      // 27
+        state->pid_error.zero * 20                                    // 28
     };
 
     UART_write(uart, buffer, sizeof(buffer));

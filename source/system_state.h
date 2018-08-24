@@ -16,6 +16,8 @@ class SystemState {
     three_phase_quantity load_voltage;
     three_phase_quantity load_line_current;
     three_phase_quantity load_ll_voltage;
+    dq0_quantity control_output;
+    dq0_quantity pid_error;
 
    private:
     SystemState(){};
