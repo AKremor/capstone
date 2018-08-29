@@ -13,6 +13,8 @@
 #include <xdc/runtime/System.h>
 #include "arm_math.h"
 
+#define NDEBUG
+
 void svm_control_loop(Timer_Handle handle);
 
 arm_pid_instance_f32 PID_d;
@@ -85,16 +87,24 @@ void mainThread(void* arg0) {
 
     FILE* fp = fopen("adc.csv", "w+b");
 
+    int counter = 0;
+    // for (int i = 0; i < 100000; i++) {
     while (1) {
         send_state_to_simulator();
 
         if (use_hil) {
-            receive_state_from_simulator();
+            // receive_state_from_simulator();
         }
 
         if (!use_svm_timer) {
             svm_control_loop(NULL);
         }
+
+        counter++;
+    }
+
+    while (true) {
+        GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, 0x00);
     }
 }
 
@@ -116,10 +126,10 @@ void svm_control_loop(Timer_Handle handle) {
     abc_quantity reference_value = SineWave::getValueAbc(state_counter);
 
     state->reference.set_abc(reference_value);
-    float32_t sinVal =
-        sinf(2.0 * PI * frequency_hz * state_counter / svm_timer_hz);
-    float32_t cosVal =
-        cosf(2.0 * PI * frequency_hz * state_counter / svm_timer_hz);
+
+    float32_t sinVal, cosVal;
+    arm_sin_cos_f32(2.0 * PI * frequency_hz * state_counter / svm_timer_hz,
+                    &sinVal, &cosVal);
 
     float32_t Ialpha = 0, Ibeta = 0;
     arm_clarke_f32(reference_value.a, reference_value.b, &Ialpha, &Ibeta);

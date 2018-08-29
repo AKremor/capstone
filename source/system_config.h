@@ -4,8 +4,8 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
-constexpr bool use_hil = false;
-constexpr bool use_svm_timer = true;
+constexpr bool use_hil = true;
+constexpr bool use_svm_timer = false;
 constexpr bool use_closed_loop = false;
 
 constexpr float32_t Kp = 10;
