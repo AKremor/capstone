@@ -83,7 +83,9 @@ void svm_modulator(float32_t d, float32_t q, float32_t sin_value,
     nodes[2] = {ceilf(hex_value.g), ceilf(hex_value.h)};
     nodes[3] = {floorf(hex_value.g), floorf(hex_value.h)};
 
+    // Vul
     svm_find_absolute_levels(nodes[0].g, nodes[0].h, nearest_nodes + 0);
+    // Vlu
     svm_find_absolute_levels(nodes[1].g, nodes[1].h, nearest_nodes + 1);
 
     if (hex_value.g + hex_value.h - nodes[0].g - nodes[0].h > 0) {
