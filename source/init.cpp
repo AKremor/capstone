@@ -88,7 +88,6 @@ void mainThread(void* arg0) {
     FILE* fp = fopen("adc.csv", "w+b");
 
     int counter = 0;
-    // for (int i = 0; i < 100000; i++) {
     while (1) {
         send_state_to_simulator();
 
@@ -101,10 +100,6 @@ void mainThread(void* arg0) {
         }
 
         counter++;
-    }
-
-    while (true) {
-        GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, 0x00);
     }
 }
 
@@ -160,23 +155,59 @@ void svm_control_loop(Timer_Handle handle) {
     state->control_output = {Idcontrol, Iqcontrol, 0};
     state->pid_error = pid_error;
 
-    PhaseVoltageLevel levels =
-        svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal);
+    PhaseVoltageLevel levels[3];
+    float32_t duty_cycle[3];
+    svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, levels, duty_cycle);
 
-    assert(levels.a >= 0);
-    assert(levels.a < n_levels);
-    assert(levels.b >= 0);
-    assert(levels.b < n_levels);
-    assert(levels.c >= 0);
-    assert(levels.c < n_levels);
+    uint32_t duty_cycle_counts[3] = {
+        (uint32_t)(duty_cycle[0] * 1000),
+        (uint32_t)(duty_cycle[0] * 1000 + duty_cycle[1] * 1000),
+        (uint32_t)(duty_cycle[0] * 1000 + duty_cycle[1] * 1000 +
+                   duty_cycle[2] * 1000)};
 
-    state->a_phase = levels.a;
-    state->b_phase = levels.b;
-    state->c_phase = levels.c;
+    volatile uint32_t counter = 0;
+
+    state->a_phase = levels[0].a;
+    state->b_phase = levels[0].b;
+    state->c_phase = levels[0].c;
+
+    send_state_to_simulator();
 
     GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state->a_phase]);
     GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
     GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
+
+    while (counter < duty_cycle_counts[0]) {
+        counter++;
+    }
+
+    state->a_phase = levels[1].a;
+    state->b_phase = levels[1].b;
+    state->c_phase = levels[1].c;
+
+    send_state_to_simulator();
+
+    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state->a_phase]);
+    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
+    GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
+
+    while (counter < duty_cycle_counts[1]) {
+        counter++;
+    }
+
+    state->a_phase = levels[2].a;
+    state->b_phase = levels[2].b;
+    state->c_phase = levels[2].c;
+
+    send_state_to_simulator();
+
+    GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state->a_phase]);
+    GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
+    GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
+
+    while (counter < duty_cycle_counts[2]) {
+        counter++;
+    }
 
     state_counter++;
 }
