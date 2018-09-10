@@ -169,12 +169,10 @@ void svm_control_loop(Timer_Handle handle) {
     uint32_t current_node = 0;
 
     while (true) {
+        if (current_node > 3) {
+            break;
+        }
         if (counter >= duty_cycle_counts[current_node]) {
-            if (current_node > 3) {
-                break;
-            }
-
-            current_node++;
             state->a_phase = levels[current_node].a;
             state->b_phase = levels[current_node].b;
             state->c_phase = levels[current_node].c;
@@ -187,6 +185,7 @@ void svm_control_loop(Timer_Handle handle) {
                          svm_phase_levels_b[state->b_phase]);
             GPIOPinWrite(GPIO_PORTA_BASE, 0xFF,
                          svm_phase_levels_c[state->c_phase]);
+            current_node++;
         }
     }
 
