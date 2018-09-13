@@ -27,7 +27,7 @@ static constexpr uint16_t svm_timer_hz = 10000;
 static constexpr int32_t n_levels = 3;
 static constexpr float32_t Vdc = 1;
 static constexpr float32_t magnitude = 2;  // 200mA current control
-static constexpr float32_t frequency_hz = 200;
+static constexpr float32_t frequency_hz = 100;
 
 enum hb_pin {
     A_POS1 = 0x01,  // PL0
@@ -69,6 +69,7 @@ constexpr uint8_t svm_phase_levels_b[] = {B_NEG1, B_OFF1, B_POS1};
 constexpr uint8_t svm_phase_levels_c[] = {C_NEG1, C_OFF1, C_POS1};
 
 // 9 level
+
 /*
 constexpr uint8_t svm_phase_levels_a[] = {
     A_NEG3 | A_NEG1, A_NEG3 | A_OFF1, A_NEG3 | A_POS1,
@@ -82,4 +83,4 @@ constexpr uint8_t svm_phase_levels_c[] = {
     C_NEG3 | C_NEG1, C_NEG3 | C_OFF1, C_NEG3 | C_POS1,
     C_OFF3 | C_NEG1, C_OFF3 | C_OFF1, C_OFF3 | C_POS1,
     C_POS3 | C_NEG1, C_POS3 | C_OFF1, C_POS3 | C_POS1};
-    */
+*/

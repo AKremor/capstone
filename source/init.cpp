@@ -111,9 +111,9 @@ void svm_control_loop(Timer_Handle handle) {
     read_adc(adc_readings);
 
     // Bias current readings appropriately
-    abc_quantity quantity_current = {2 * (adc_readings[0] - 1.6f),
-                                     2 * (adc_readings[1] - 1.6f),
-                                     2 * (adc_readings[2] - 1.6f)};
+    abc_quantity quantity_current = {2 * (adc_readings[0] - 1.55f),
+                                     2 * (adc_readings[1] - 1.55f),
+                                     2 * (adc_readings[2] - 1.55f)};
     state->load_line_current.set_abc(quantity_current);
 
     static volatile uint64_t state_counter = 0;
@@ -160,16 +160,16 @@ void svm_control_loop(Timer_Handle handle) {
     svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, levels, duty_cycle);
 
     uint32_t duty_cycle_counts[4] = {
-        0, (uint32_t)(duty_cycle[0] * 1000),
-        (uint32_t)(duty_cycle[0] * 1000 + duty_cycle[1] * 1000),
-        (uint32_t)(duty_cycle[0] * 1000 + duty_cycle[1] * 1000 +
-                   duty_cycle[2] * 1000)};
+        0, (uint32_t)(duty_cycle[0] * 5000),
+        (uint32_t)(duty_cycle[0] * 5000 + duty_cycle[1] * 5000),
+        (uint32_t)(duty_cycle[0] * 5000 + duty_cycle[1] * 5000 +
+                   duty_cycle[2] * 5000)};
 
     volatile uint32_t counter = 0;
     uint32_t current_node = 0;
 
     while (true) {
-        if (current_node > 3) {
+        if (current_node >= 3) {
             break;
         }
         if (counter >= duty_cycle_counts[current_node]) {
@@ -177,6 +177,13 @@ void svm_control_loop(Timer_Handle handle) {
             state->b_phase = levels[current_node].b;
             state->c_phase = levels[current_node].c;
 
+           // float32_t adc_readings[5];
+           // read_adc(adc_readings);
+            // Bias current readings appropriately
+            // abc_quantity quantity_current = {2 * (adc_readings[0] - 1.55f),
+                                             //2 * (adc_readings[1] - 1.55f),
+                                             //2 * (adc_readings[2] - 1.55f)};
+            // state->load_line_current.set_abc(quantity_current);
             send_state_to_simulator();
 
             GPIOPinWrite(GPIO_PORTL_BASE, 0xFF,
@@ -187,6 +194,7 @@ void svm_control_loop(Timer_Handle handle) {
                          svm_phase_levels_c[state->c_phase]);
             current_node++;
         }
+        counter++;
     }
 
     state_counter++;

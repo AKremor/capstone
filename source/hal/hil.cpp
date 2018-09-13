@@ -76,10 +76,12 @@ void init_hil() {
 
 void send_state_to_simulator() {
     SystemState* state = SystemState::get();
-    float scaling_factor = 1;
-    int8_t ref_val_a = state->reference.get_abc().a * scaling_factor;
-    int8_t ref_val_b = state->reference.get_abc().b * scaling_factor;
-    int8_t ref_val_c = state->reference.get_abc().c * scaling_factor;
+    float scaling_factor = 20;
+    abc_quantity abc_reference = state->reference.get_abc();
+
+    int8_t ref_val_a = abc_reference.a * scaling_factor;
+    int8_t ref_val_b = abc_reference.b * scaling_factor;
+    int8_t ref_val_c = abc_reference.c * scaling_factor;
 
     int8_t a_9_cell = ((svm_phase_levels_a[state->a_phase] & A_POS9) ? 1 : 0) +
                       ((svm_phase_levels_a[state->a_phase] & A_NEG9) ? -1 : 0);

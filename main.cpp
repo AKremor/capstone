@@ -7,7 +7,7 @@ extern "C" {
 void NDK_hookInit(){};
 }
 
-int main(void) {
+    int main(void) {
     Task_Params task_params;
     Task_Params_init(&task_params);
     task_params.stackSize = 5000;

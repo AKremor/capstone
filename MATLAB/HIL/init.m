@@ -1,5 +1,5 @@
-L = 1e-1;
-R = 90;
+L = 50e-2;
+R = 1;
 Vdc = 1;
 Ts = 1e-4;
 
@@ -9,3 +9,15 @@ n_levels = 9;
 Kp = 6.3;
 Ki = 63;
 Kd = 0;
+
+Ron = 0.025;
+C = 100e-4;
+tfModel1 =tf([Ron*C 1],[Ron*C*L, L+R*Ron*C R +  4*Ron]);
+tfModel2 =tf([1],[L R]);
+
+hold on
+bode(tfModel1);
+bode(tfModel2);
+bode(tf3);
+
+legend('Ron','Roff','SysId','HW')
