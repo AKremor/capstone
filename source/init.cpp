@@ -85,6 +85,8 @@ void mainThread(void* arg0) {
 
     SystemState* state = SystemState::get();
 
+    FILE* fp = fopen("adc.csv", "w+b");
+
     int counter = 0;
     while (1) {
         send_state_to_simulator();
@@ -104,6 +106,15 @@ void mainThread(void* arg0) {
 void svm_control_loop(Timer_Handle handle) {
     // Timer handle not used so can be made NULL
     SystemState* state = SystemState::get();
+
+    float32_t adc_readings[5];
+    read_adc(adc_readings);
+
+    // Bias current readings appropriately
+    abc_quantity quantity_current = {2 * (adc_readings[0] - 1.55f),
+                                     2 * (adc_readings[1] - 1.55f),
+                                     2 * (adc_readings[2] - 1.55f)};
+    state->load_line_current.set_abc(quantity_current);
 
     static volatile uint64_t state_counter = 0;
 
@@ -149,12 +160,10 @@ void svm_control_loop(Timer_Handle handle) {
     svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, levels, duty_cycle);
 
     uint32_t duty_cycle_counts[4] = {
-        0,
-        (uint32_t)((duty_cycle[0]) * pwm_period),
-        (uint32_t)((duty_cycle[0] + duty_cycle[1]) * pwm_period),
-        (uint32_t)((duty_cycle[0] + duty_cycle[1] + duty_cycle[2]) *
-                   pwm_period),
-    };
+        0, (uint32_t)(duty_cycle[0] * 5000),
+        (uint32_t)(duty_cycle[0] * 5000 + duty_cycle[1] * 5000),
+        (uint32_t)(duty_cycle[0] * 5000 + duty_cycle[1] * 5000 +
+                   duty_cycle[2] * 5000)};
 
     volatile uint32_t counter = 0;
     uint32_t current_node = 0;
@@ -168,6 +177,13 @@ void svm_control_loop(Timer_Handle handle) {
             state->b_phase = levels[current_node].b;
             state->c_phase = levels[current_node].c;
 
+           // float32_t adc_readings[5];
+           // read_adc(adc_readings);
+            // Bias current readings appropriately
+            // abc_quantity quantity_current = {2 * (adc_readings[0] - 1.55f),
+                                             //2 * (adc_readings[1] - 1.55f),
+                                             //2 * (adc_readings[2] - 1.55f)};
+            // state->load_line_current.set_abc(quantity_current);
             send_state_to_simulator();
 
             GPIOPinWrite(GPIO_PORTL_BASE, 0xFF,
