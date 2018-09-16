@@ -1,21 +1,15 @@
-#include <ti/sysbios/BIOS.h>
-#include <ti/sysbios/knl/Task.h>
+#include <stdint.h>
+#include <ti/devices/msp432e4/driverlib/driverlib.h>
 
 extern void mainThread(void *arg0);
 
-extern "C" {
-void NDK_hookInit(){};
-}
+uint32_t systemClock;
 
-    int main(void) {
-    Task_Params task_params;
-    Task_Params_init(&task_params);
-    task_params.stackSize = 5000;
-    task_params.instance->name = "Main thread";
-    task_params.priority = 1;
-    Task_create((Task_FuncPtr)mainThread, &task_params, NULL);
-
-    BIOS_start();
+int main(void) {
+    systemClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ | SYSCTL_OSC_MAIN |
+                                          SYSCTL_USE_PLL | SYSCTL_CFG_VCO_480),
+                                         120000000);
+    mainThread(0);
 
     return (0);
 }

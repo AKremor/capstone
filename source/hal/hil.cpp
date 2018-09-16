@@ -1,11 +1,10 @@
 #include <source/hal/hil.h>
 #include <source/system_config.h>
 #include <source/system_state.h>
-#include <ti/drivers/UART.h>
-
-UART_Handle uart;
+#include "ti/devices/msp432e4/driverlib/driverlib.h"
 
 void receive_state_from_simulator() {
+    /* TODO(akremor)
     SystemState* state = SystemState::get();
     int8_t read_buffer[20];
 
@@ -55,23 +54,25 @@ void receive_state_from_simulator() {
         state->load_line_current.set_abc(load_line_current);
         state->load_ll_voltage.set_abc(load_ll_voltage);
     }
+    */
 }
 
 void init_hil() {
-    UART_init();
+    /* Enable the GPIO Peripheral used by the UART */
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOD))) {
+    }
 
-    UART_Params uart_params;
-    UART_Params_init(&uart_params);
-    uart_params.readEcho = UART_ECHO_OFF;
-    uart_params.readDataMode = UART_DATA_BINARY;
-    uart_params.writeDataMode = UART_DATA_BINARY;
-    uart_params.baudRate = 921600;
-    uart_params.readMode = UART_MODE_BLOCKING;
-    uart_params.writeMode = UART_MODE_BLOCKING;
-    uart_params.writeTimeout = 1000;
-    uart_params.readTimeout = 1000;
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART2);
 
-    uart = UART_open(0, &uart_params);
+    /* Configure GPIO Pins for UART mode */
+    MAP_GPIOPinConfigure(GPIO_PD4_U2RX);
+    MAP_GPIOPinConfigure(GPIO_PD5_U2TX);
+    MAP_GPIOPinTypeUART(GPIO_PORTD_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+
+    MAP_UARTConfigSetExpClk(
+        UART2_BASE, 120E6, 921600,
+        UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE);
 }
 
 void send_state_to_simulator() {
@@ -149,5 +150,7 @@ void send_state_to_simulator() {
         state->pid_error.zero * 20                                    // 28
     };
 
-    UART_write(uart, buffer, sizeof(buffer));
+    for (int i = 0; i < sizeof(buffer); i++) {
+        MAP_UARTCharPutNonBlocking(UART2_BASE, buffer[i]);
+    }
 }

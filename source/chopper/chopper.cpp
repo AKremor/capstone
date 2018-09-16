@@ -18,8 +18,8 @@ void start_chopper() {
     // TODO(akremor): Abstract these out somehow
     MAP_GPIOPinConfigure(GPIO_PF0_M0PWM0);
     MAP_GPIOPinConfigure(GPIO_PF1_M0PWM1);
-    GPIOPinTypePWM(chopper_gpio_port_base,
-                   (chopper_gpio_pin_ac_pos | chopper_gpio_pin_ac_neg));
+    MAP_GPIOPinTypePWM(chopper_gpio_port_base,
+                       (chopper_gpio_pin_ac_pos | chopper_gpio_pin_ac_neg));
 
     /* Configure the PWM0 to count up/down without synchronization. */
     MAP_PWMGenConfigure(chopper_pwm_base, PWM_GEN_0,
@@ -27,16 +27,16 @@ void start_chopper() {
     // N = (1 / f) * SysClk.  Where N is the function parameter, f is the
     // desired frequency, and SysClk is the system clock frequency. Note that
     // the maximum period you can set is 2^16 - 1.
-    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0,
-                    1.0 * system_clock_mhz * 10e6 / chopper_hz);
+    MAP_PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0,
+                        1.0 * system_clock_mhz * 10e6 / chopper_hz);
 
     // Duty cycle set as a period of counts
-    PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,
-                     MAP_PWMGenPeriodGet(chopper_pwm_base, PWM_GEN_0) / 2);
-    PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_1,
-                     MAP_PWMGenPeriodGet(chopper_pwm_base, PWM_GEN_0) / 2);
+    MAP_PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,
+                         MAP_PWMGenPeriodGet(chopper_pwm_base, PWM_GEN_0) / 2);
+    MAP_PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_1,
+                         MAP_PWMGenPeriodGet(chopper_pwm_base, PWM_GEN_0) / 2);
 
-    PWMOutputInvert(chopper_pwm_base, PWM_OUT_0_BIT | PWM_OUT_1_BIT, false);
+    MAP_PWMOutputInvert(chopper_pwm_base, PWM_OUT_0_BIT | PWM_OUT_1_BIT, false);
 
     // Deadbanding also handles the complementary output
     // With the deadband width set to 0 we have standard complementary outputs
