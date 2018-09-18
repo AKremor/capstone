@@ -1,3 +1,4 @@
+#include "init.h"
 #include <source/chopper/chopper.h>
 #include <source/hal/adc.h>
 #include <source/hal/hil.h>
@@ -9,12 +10,11 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
-#define NDEBUG
-
 void svm_control_loop();
 
 arm_pid_instance_f32 PID_d;
 arm_pid_instance_f32 PID_q;
+volatile bool run_svm = false;
 
 void init_hbridge_io() {
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
@@ -29,6 +29,10 @@ void init_hbridge_io() {
     while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOA)))
         ;
 
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
+    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOM)))
+        ;
+
     MAP_GPIOPinTypeGPIOOutput(
         GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
@@ -39,6 +43,10 @@ void init_hbridge_io() {
 
     MAP_GPIOPinTypeGPIOOutput(
         GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
+                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+
+    MAP_GPIOPinTypeGPIOOutput(
+        GPIO_PORTM_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
@@ -62,23 +70,64 @@ void mainThread(void* arg0) {
     init_svm_timer();
     init_adc();
 
-    int counter = 0;
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER0))) {
+    }
+
+    MAP_TimerConfigure(TIMER0_BASE,
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+    MAP_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_TimerPrescaleSet(TIMER0_BASE, TIMER_A, 120);
+    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, 1);
+    MAP_IntEnable(INT_TIMER0A);
+    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
+
     while (1) {
-        send_state_to_simulator();
-
-        if (use_hil) {
-            // receive_state_from_simulator();
-        }
-
-        if (!use_svm_timer) {
+        if (run_svm) {
+            run_svm = false;
             svm_control_loop();
         }
-
-        counter++;
     }
 }
 
+SystemState* state = SystemState::get();
+static int duty_state_counter = 0;
+PhaseVoltageLevel duty_levels_current[3] = {0, 0, 0};
+PhaseVoltageLevel duty_levels_next[3] = {0, 0, 0};
+
+float32_t duty_cycles_current[3] = {1, 1, 1};
+float32_t duty_cycles_next[3] = {1, 1, 1};
+
+void TIMER0A_IRQHandler(void) {
+    MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+    // TODO we will run junk data for the very first sample period Ts
+    if (duty_state_counter == 0) {
+        memcpy(&duty_levels_current, &duty_levels_next,
+               3 * sizeof(PhaseVoltageLevel));
+        memcpy(&duty_cycles_current, &duty_cycles_next, 3 * sizeof(float32_t));
+        run_svm = true;
+    }
+
+    state->a_phase = duty_levels_current[duty_state_counter].a;
+    state->b_phase = duty_levels_current[duty_state_counter].b;
+    state->c_phase = duty_levels_current[duty_state_counter].c;
+
+    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state->a_phase]);
+    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
+    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
+
+    uint16_t val = duty_cycles_current[duty_state_counter] > 0
+                       ? duty_cycles_current[duty_state_counter] * pwm_period_us
+                       : 100;
+    // Configure the timer for next go
+    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, val);
+
+    duty_state_counter = (duty_state_counter + 1) % 3;
+}
+
 void svm_control_loop() {
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_PIN_6);
     // Timer handle not used so can be made NULL
     SystemState* state = SystemState::get();
 
@@ -134,28 +183,14 @@ void svm_control_loop() {
     float32_t duty_cycle[3];
     svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, levels, duty_cycle);
 
-    uint32_t duty_cycle_counts[3] = {
-        (uint32_t)(duty_cycle[0] * pwm_period),
-        (uint32_t)((duty_cycle[0] + duty_cycle[1]) * pwm_period),
-        (uint32_t)((duty_cycle[0] + duty_cycle[1] + duty_cycle[2]) *
-                   pwm_period)};
+    duty_cycles_next[0] = duty_cycle[0];
+    duty_cycles_next[1] = duty_cycle[1];
+    duty_cycles_next[2] = duty_cycle[2];
 
-    for (int i = 0; i < 3; i++) {
-        state->a_phase = levels[i].a;
-        state->b_phase = levels[i].b;
-        state->c_phase = levels[i].c;
-
-        // TODO HIL disabled
-
-        MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF,
-                         svm_phase_levels_a[state->a_phase]);
-        MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF,
-                         svm_phase_levels_b[state->b_phase]);
-        MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF,
-                         svm_phase_levels_c[state->c_phase]);
-
-        MAP_SysCtlDelay(duty_cycle_counts[i]);
-    }
+    duty_levels_next[0] = levels[0];
+    duty_levels_next[1] = levels[1];
+    duty_levels_next[2] = levels[2];
 
     state_counter++;
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, 0);
 }

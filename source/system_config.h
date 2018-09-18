@@ -29,7 +29,7 @@ static constexpr float32_t Vdc = 1;
 static constexpr float32_t magnitude = 2;  // 200mA current control
 static constexpr float32_t frequency_hz = 100;
 constexpr uint32_t pwm_frequency_hz = 10000;
-constexpr uint32_t pwm_period = system_clock_mhz * 1E6 / pwm_frequency_hz;
+constexpr uint32_t pwm_period_us = 10000;
 
 enum hb_pin {
     A_POS1 = 0x01,  // PL0
