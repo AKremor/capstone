@@ -54,6 +54,14 @@ void init_svm_timer(){
     // TODO Set up timer
 };
 
+static uint64_t system_time = 0;
+
+extern "C" {
+void SysTick_Handler(void) {
+    system_time++;
+    uint32_t gpioState;
+}
+}
 void mainThread(void* arg0) {
     PID_d.Kd = Kd;
     PID_d.Ki = Ki;
@@ -69,6 +77,10 @@ void mainThread(void* arg0) {
     init_hbridge_io();
     init_svm_timer();
     init_adc();
+
+    MAP_SysTickPeriodSet(120);  // Timing in 1us
+    MAP_SysTickIntEnable();
+    MAP_SysTickEnable();
 
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER0))) {
@@ -117,14 +129,14 @@ void TIMER0A_IRQHandler(void) {
     MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
     MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
 
-    uint16_t val = duty_cycles_current[duty_state_counter] > 0
-                       ? duty_cycles_current[duty_state_counter] * pwm_period_us
-                       : 100;
+    uint16_t val = duty_cycles_current[duty_state_counter] * pwm_period_us;
     // Configure the timer for next go
     MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, val);
 
     duty_state_counter = (duty_state_counter + 1) % 3;
 }
+
+float32_t prev_adc[5];
 
 void svm_control_loop() {
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_PIN_6);
@@ -135,20 +147,21 @@ void svm_control_loop() {
     read_adc(adc_readings);
 
     // Bias current readings appropriately
-    abc_quantity quantity_current = {2 * (adc_readings[0] - 1.55f),
-                                     2 * (adc_readings[1] - 1.55f),
-                                     2 * (adc_readings[2] - 1.55f)};
+    abc_quantity quantity_current = {
+        2 * ((adc_readings[0] + prev_adc[0]) / 2.0 - 1.6f),
+        2 * ((adc_readings[1] + prev_adc[1]) / 2.0 - 1.6f),
+        2 * ((adc_readings[2] + prev_adc[2]) / 2.0 - 1.6f)};
+    memcpy(prev_adc, adc_readings, 5 * sizeof(float32_t));
+
     state->load_line_current.set_abc(quantity_current);
 
-    static volatile uint64_t state_counter = 0;
-
-    abc_quantity reference_value = SineWave::getValueAbc(state_counter);
+    abc_quantity reference_value = SineWave::getValueAbc(system_time);
 
     state->reference.set_abc(reference_value);
 
     float32_t sinVal, cosVal;
-    arm_sin_cos_f32(2.0 * PI * frequency_hz * state_counter / svm_timer_hz,
-                    &sinVal, &cosVal);
+    arm_sin_cos_f32(2.0 * PI * frequency_hz * system_time * 1E-6, &sinVal,
+                    &cosVal);
 
     float32_t Ialpha = 0, Ibeta = 0;
     arm_clarke_f32(reference_value.a, reference_value.b, &Ialpha, &Ibeta);
@@ -191,6 +204,5 @@ void svm_control_loop() {
     duty_levels_next[1] = levels[1];
     duty_levels_next[2] = levels[2];
 
-    state_counter++;
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, 0);
 }
