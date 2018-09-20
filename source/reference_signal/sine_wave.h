@@ -3,5 +3,5 @@
 
 class SineWave : public ISignal {
    public:
-    static abc_quantity getValueAbc(uint64_t n);
+    static abc_quantity getValueAbc(uint32_t n);
 };

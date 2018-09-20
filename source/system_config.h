@@ -28,7 +28,9 @@ static constexpr int32_t n_levels = 9;
 static constexpr float32_t Vdc = 1;
 static constexpr float32_t magnitude = 3;  // 200mA current control
 static constexpr float32_t frequency_hz = 100;
-constexpr uint32_t pwm_period_us = 100;
+constexpr uint32_t pwm_period_us = 500;
+constexpr float32_t omega = 2.0 * PI * frequency_hz * 1E-6;
+constexpr uint32_t omega_period = 1 / omega;
 
 enum hb_pin {
     A_POS1 = 0x01,  // PL0

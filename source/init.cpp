@@ -50,18 +50,15 @@ void init_hbridge_io() {
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
-void init_svm_timer(){
-    // TODO Set up timer
-};
+static uint32_t system_time = 0;
 
-static uint64_t system_time = 0;
-
-extern "C" {
 void SysTick_Handler(void) {
     system_time++;
-    uint32_t gpioState;
+    if (system_time > omega_period) {
+        system_time = 0;
+    }
 }
-}
+
 void mainThread(void* arg0) {
     PID_d.Kd = Kd;
     PID_d.Ki = Ki;
@@ -75,7 +72,6 @@ void mainThread(void* arg0) {
     start_chopper();
     init_hil();
     init_hbridge_io();
-    init_svm_timer();
     init_adc();
 
     MAP_SysTickPeriodSet(120);  // Timing in 1us
@@ -141,7 +137,9 @@ float32_t prev_adc[5];
 void svm_control_loop() {
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_PIN_6);
     // Timer handle not used so can be made NULL
-    SystemState* state = SystemState::get();
+
+    float32_t sinVal, cosVal;
+    arm_sin_cos_f32(omega * system_time, &sinVal, &cosVal);
 
     float32_t adc_readings[5];
     read_adc(adc_readings);
@@ -153,15 +151,7 @@ void svm_control_loop() {
         2 * ((adc_readings[2] + prev_adc[2]) / 2.0 - 1.6f)};
     memcpy(prev_adc, adc_readings, 5 * sizeof(float32_t));
 
-    state->load_line_current.set_abc(quantity_current);
-
     abc_quantity reference_value = SineWave::getValueAbc(system_time);
-
-    state->reference.set_abc(reference_value);
-
-    float32_t sinVal, cosVal;
-    arm_sin_cos_f32(2.0 * PI * frequency_hz * system_time * 1E-6, &sinVal,
-                    &cosVal);
 
     float32_t Ialpha = 0, Ibeta = 0;
     arm_clarke_f32(reference_value.a, reference_value.b, &Ialpha, &Ibeta);
@@ -169,7 +159,7 @@ void svm_control_loop() {
     float32_t Id = 0, Iq = 0;
     arm_park_f32(Ialpha, Ibeta, &Id, &Iq, sinVal, cosVal);
 
-    abc_quantity load_line_current = state->load_line_current.get_abc();
+    abc_quantity load_line_current = quantity_current;
 
     float32_t Ialphasense = 0, Ibetasense = 0;
     arm_clarke_f32(load_line_current.a, load_line_current.b, &Ialphasense,
@@ -189,20 +179,12 @@ void svm_control_loop() {
         Iqcontrol = Iq;
     }
 
-    state->control_output = {Idcontrol, Iqcontrol, 0};
-    state->pid_error = pid_error;
-
     PhaseVoltageLevel levels[3];
     float32_t duty_cycle[3];
     svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, levels, duty_cycle);
 
-    duty_cycles_next[0] = duty_cycle[0];
-    duty_cycles_next[1] = duty_cycle[1];
-    duty_cycles_next[2] = duty_cycle[2];
-
-    duty_levels_next[0] = levels[0];
-    duty_levels_next[1] = levels[1];
-    duty_levels_next[2] = levels[2];
+    memcpy(duty_cycles_next, duty_cycle, 3 * sizeof(float32_t));
+    memcpy(duty_levels_next, levels, 3 * sizeof(PhaseVoltageLevel));
 
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, 0);
 }
