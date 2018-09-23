@@ -142,15 +142,15 @@ void send_state_to_simulator() {
         load_ll_current_a,                                            // 20
         load_ll_current_b,                                            // 21
         load_ll_current_c,                                            // 22
-        state->control_output.d * 10,                                 // 23
-        state->control_output.q * 10,                                 // 24
-        state->control_output.zero * 10,                              // 25
-        state->pid_error.d * 20,                                      // 26
-        state->pid_error.q * 20,                                      // 27
-        state->pid_error.zero * 20                                    // 28
+        (int8_t)(state->control_output.d * 10),                       // 23
+        (int8_t)(state->control_output.q * 10),                       // 24
+        (int8_t)(state->control_output.zero * 10),                    // 25
+        (int8_t)(state->pid_error.d * 20),                            // 26
+        (int8_t)(state->pid_error.q * 20),                            // 27
+        (int8_t)(state->pid_error.zero * 20)                          // 28
     };
 
-    for (int i = 0; i < sizeof(buffer); i++) {
+    for (uint8_t i = 0; i < sizeof(buffer); i++) {
         MAP_UARTCharPutNonBlocking(UART2_BASE, buffer[i]);
     }
 }

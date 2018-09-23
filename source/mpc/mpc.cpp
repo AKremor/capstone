@@ -10,9 +10,9 @@ PhaseVoltageLevel findOptimalSwitchingIndex(SystemState *system_state,
     float best_cost_found = std::numeric_limits<float>::max();
     // TODO collapse desired state into system state
 
-    for (int a = 0; a < sizeof(svm_phase_levels_a); a++) {
-        for (int b = 0; b < sizeof(svm_phase_levels_b); b++) {
-            for (int c = 0; c < sizeof(svm_phase_levels_c); c++) {
+    for (uint8_t a = 0; a < sizeof(svm_phase_levels_a); a++) {
+        for (uint8_t b = 0; b < sizeof(svm_phase_levels_b); b++) {
+            for (uint8_t c = 0; c < sizeof(svm_phase_levels_c); c++) {
                 PhaseVoltageLevel level;
                 level.a = a - sizeof(svm_phase_levels_a) / 2;
                 level.b = b - sizeof(svm_phase_levels_b) / 2;

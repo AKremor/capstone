@@ -10,11 +10,10 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
-void svm_control_loop();
+static uint32_t system_time = 0;
 
 arm_pid_instance_f32 PID_d;
 arm_pid_instance_f32 PID_q;
-volatile bool run_svm = false;
 
 void init_hbridge_io() {
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
@@ -50,13 +49,56 @@ void init_hbridge_io() {
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
-static uint32_t system_time = 0;
-
 void SysTick_Handler(void) {
     system_time++;
-    if (system_time > omega_period) {
-        system_time = 0;
+    system_time = system_time % omega_period;
+}
+
+void init_timers() {
+    // Configure the system tick timer at 1us for timing
+    MAP_SysTickPeriodSet(120);  // Timing in 1us
+    MAP_SysTickIntEnable();
+    MAP_SysTickEnable();
+
+    // All timers are configured to have a tick period of 1us
+
+    // Timer 0 -> PWM
+    // Timer 1 -> SVM
+    // Timer 2 -> ADC (if not in SVM loop)
+
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER0))) {
     }
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER1))) {
+    }
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER2))) {
+    }
+
+    MAP_TimerConfigure(TIMER0_BASE,
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+    MAP_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_TimerPrescaleSet(TIMER0_BASE, TIMER_A, 120);
+    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, 1);
+    MAP_IntEnable(INT_TIMER0A);
+    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
+
+    MAP_TimerConfigure(TIMER1_BASE,
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+    MAP_TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_TimerPrescaleSet(TIMER1_BASE, TIMER_A, 120);
+    MAP_TimerLoadSet(TIMER1_BASE, TIMER_A, svm_period_us);
+    MAP_IntEnable(INT_TIMER1A);
+    MAP_TimerEnable(TIMER1_BASE, TIMER_A);
+
+    MAP_TimerConfigure(TIMER2_BASE,
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+    MAP_TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_TimerPrescaleSet(TIMER2_BASE, TIMER_A, 120);
+    MAP_TimerLoadSet(TIMER2_BASE, TIMER_A, adc_period_us);
+    MAP_IntEnable(INT_TIMER2A);
+    MAP_TimerEnable(TIMER2_BASE, TIMER_A);
 }
 
 void mainThread(void* arg0) {
@@ -73,28 +115,9 @@ void mainThread(void* arg0) {
     init_hil();
     init_hbridge_io();
     init_adc();
-
-    MAP_SysTickPeriodSet(120);  // Timing in 1us
-    MAP_SysTickIntEnable();
-    MAP_SysTickEnable();
-
-    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
-    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER0))) {
-    }
-
-    MAP_TimerConfigure(TIMER0_BASE,
-                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
-    MAP_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    MAP_TimerPrescaleSet(TIMER0_BASE, TIMER_A, 120);
-    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, 1);
-    MAP_IntEnable(INT_TIMER0A);
-    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
+    init_timers();
 
     while (1) {
-        if (run_svm) {
-            run_svm = false;
-            svm_control_loop();
-        }
     }
 }
 
@@ -108,13 +131,13 @@ float32_t duty_cycles_next[3] = {1, 1, 1};
 
 void TIMER0A_IRQHandler(void) {
     MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_5, GPIO_PIN_5);
 
     // TODO we will run junk data for the very first sample period Ts
     if (duty_state_counter == 0) {
         memcpy(&duty_levels_current, &duty_levels_next,
                3 * sizeof(PhaseVoltageLevel));
         memcpy(&duty_cycles_current, &duty_cycles_next, 3 * sizeof(float32_t));
-        run_svm = true;
     }
 
     state->a_phase = duty_levels_current[duty_state_counter].a;
@@ -130,14 +153,26 @@ void TIMER0A_IRQHandler(void) {
     MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, val);
 
     duty_state_counter = (duty_state_counter + 1) % 3;
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_5, 0);
+}
+
+void TIMER1A_IRQHandler(void) {
+    MAP_TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_PIN_6);
+    svm_control_loop();
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, 0);
+}
+
+void TIMER2A_IRQHandler(void) {
+    MAP_TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, 0);
+    // TODO(akremor): Put current readings here
 }
 
 float32_t prev_adc[5];
 
 void svm_control_loop() {
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_PIN_6);
-    // Timer handle not used so can be made NULL
-
     float32_t sinVal, cosVal;
     arm_sin_cos_f32(omega * system_time, &sinVal, &cosVal);
 
@@ -146,9 +181,9 @@ void svm_control_loop() {
 
     // Bias current readings appropriately
     abc_quantity quantity_current = {
-        2 * ((adc_readings[0] + prev_adc[0]) / 2.0 - 1.6f),
-        2 * ((adc_readings[1] + prev_adc[1]) / 2.0 - 1.6f),
-        2 * ((adc_readings[2] + prev_adc[2]) / 2.0 - 1.6f)};
+        (float32_t)(2 * ((adc_readings[0] + prev_adc[0]) / 2.0 - 1.6f)),
+        (float32_t)(2 * ((adc_readings[1] + prev_adc[1]) / 2.0 - 1.6f)),
+        (float32_t)(2 * ((adc_readings[2] + prev_adc[2]) / 2.0 - 1.6f))};
     memcpy(prev_adc, adc_readings, 5 * sizeof(float32_t));
 
     abc_quantity reference_value = SineWave::getValueAbc(system_time);
@@ -185,6 +220,4 @@ void svm_control_loop() {
 
     memcpy(duty_cycles_next, duty_cycle, 3 * sizeof(float32_t));
     memcpy(duty_levels_next, levels, 3 * sizeof(PhaseVoltageLevel));
-
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, 0);
 }

@@ -1,11 +1,9 @@
 #pragma once
 
 #include <stdint.h>
-#include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
 constexpr bool use_hil = true;
-constexpr bool use_svm_timer = false;
 constexpr bool use_closed_loop = false;
 
 constexpr float32_t Kp = 11.75;
@@ -14,22 +12,23 @@ constexpr float32_t Kd = 0;
 
 constexpr uint32_t system_clock_mhz = 120;
 
+// Chopper configuration
+// 12000, 1000, 1000 for 10kHz
+// 6000, 672, 672 for 20kHz
+// 3000, 1000, 1000 for 40kHz
 static const uint32_t chopper_hz = 10000;
 static const uint32_t chopper_rising_dead_band_ns = 3600;
 static const uint32_t chopper_falling_dead_band_ns = 3600;
 
-// 12000, 1000, 1000 for 10kHz
-// 6000, 672, 672 for 20kHz
-// 3000, 1000, 1000 for 40kHz
-
 // Internal reference generation
-static constexpr uint16_t svm_timer_hz = 10000;
-static constexpr int32_t n_levels = 9;
+static constexpr uint16_t svm_period_us = 50;
+static constexpr uint16_t adc_period_us = 50;
+static constexpr int32_t n_levels = 3;
 static constexpr float32_t Vdc = 1;
-static constexpr float32_t magnitude = 3;  // 200mA current control
-static constexpr float32_t frequency_hz = 100;
+static constexpr float32_t magnitude = 2;  // 200mA current control
+static constexpr float32_t fundamental_frequency_hz = 100;
 constexpr uint32_t pwm_period_us = 500;
-constexpr float32_t omega = 2.0 * PI * frequency_hz * 1E-6;
+constexpr float32_t omega = 2.0 * PI * fundamental_frequency_hz * 1E-6;
 constexpr uint32_t omega_period = 1 / omega;
 
 enum hb_pin {
@@ -67,14 +66,14 @@ enum hb_pin {
 
 // 3 level
 
-/*
+
 constexpr uint8_t svm_phase_levels_a[] = {A_NEG1, A_OFF1, A_POS1};
 constexpr uint8_t svm_phase_levels_b[] = {B_NEG1, B_OFF1, B_POS1};
 constexpr uint8_t svm_phase_levels_c[] = {C_NEG1, C_OFF1, C_POS1};
-*/
 
 // 9 level
 
+/*
 constexpr uint8_t svm_phase_levels_a[] = {
     A_NEG3 | A_NEG1, A_NEG3 | A_OFF1, A_NEG3 | A_POS1,
     A_OFF3 | A_NEG1, A_OFF3 | A_OFF1, A_OFF3 | A_POS1,
@@ -87,3 +86,4 @@ constexpr uint8_t svm_phase_levels_c[] = {
     C_NEG3 | C_NEG1, C_NEG3 | C_OFF1, C_NEG3 | C_POS1,
     C_OFF3 | C_NEG1, C_OFF3 | C_OFF1, C_OFF3 | C_POS1,
     C_POS3 | C_NEG1, C_POS3 | C_OFF1, C_POS3 | C_POS1};
+*/
