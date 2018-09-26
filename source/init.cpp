@@ -204,7 +204,7 @@ void svm_control_loop() {
 
     dq0_quantity pid_error = {Id - Idsense, Iq - Iqsense, 0};
 
-    float32_t Idcontrol, Iqcontrol;
+    volatile float32_t Idcontrol, Iqcontrol;
     if (use_closed_loop) {
         Idcontrol = arm_pid_f32(&PID_d, pid_error.d);
         Iqcontrol = arm_pid_f32(&PID_q, pid_error.q);

@@ -3,10 +3,9 @@
 #include <stdint.h>
 #include "arm_math.h"
 
-constexpr bool use_hil = true;
-constexpr bool use_closed_loop = false;
+constexpr bool use_closed_loop = true;
 
-constexpr float32_t Kp = 11.75;
+constexpr float32_t Kp = 50;
 constexpr float32_t Ki = 1;
 constexpr float32_t Kd = 0;
 
@@ -27,7 +26,7 @@ static constexpr int16_t pwm_period_div = 1;
 static constexpr int16_t pwm_period_us = svm_period_us / pwm_period_div;
 static constexpr int32_t n_levels = 3;
 static constexpr float32_t Vdc = 1;
-static constexpr float32_t magnitude = 2;  // 200mA current control
+static constexpr float32_t magnitude = 1;  // 200mA current control
 static constexpr float32_t fundamental_frequency_hz = 50;
 constexpr float32_t omega = 2.0 * PI * fundamental_frequency_hz * 1E-6;
 constexpr uint32_t omega_period = 1 / omega;
@@ -66,7 +65,6 @@ enum hb_pin {
 };
 
 // 3 level
-
 
 constexpr uint8_t svm_phase_levels_a[] = {A_NEG1, A_OFF1, A_POS1};
 constexpr uint8_t svm_phase_levels_b[] = {B_NEG1, B_OFF1, B_POS1};
