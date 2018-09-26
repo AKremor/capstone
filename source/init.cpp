@@ -52,9 +52,10 @@ void init_hbridge_io() {
 void init_timers() {
     // All timers are configured to have a tick period of 1us
 
-    // Timer 0 -> PWM
-    // Timer 1 -> SVM
-    // Timer 2 -> ADC (if not in SVM loop which it currently is)
+    // Timer 0 -> PWM1
+    // Timer 1 -> PWM2
+    // Timer 2 -> PWM3
+    // Timer 2 -> SVM
 
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER0))) {
@@ -65,30 +66,35 @@ void init_timers() {
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER2))) {
     }
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER3);
+    while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER3))) {
+    }
 
     MAP_TimerConfigure(TIMER0_BASE,
-                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_ONE_SHOT);
     MAP_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
     MAP_TimerPrescaleSet(TIMER0_BASE, TIMER_A, 120);
-    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, 1);
     MAP_IntEnable(INT_TIMER0A);
-    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
 
     MAP_TimerConfigure(TIMER1_BASE,
-                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_ONE_SHOT);
     MAP_TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
     MAP_TimerPrescaleSet(TIMER1_BASE, TIMER_A, 120);
-    MAP_TimerLoadSet(TIMER1_BASE, TIMER_A, svm_period_us);
     MAP_IntEnable(INT_TIMER1A);
-    MAP_TimerEnable(TIMER1_BASE, TIMER_A);
 
     MAP_TimerConfigure(TIMER2_BASE,
-                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_ONE_SHOT);
     MAP_TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
     MAP_TimerPrescaleSet(TIMER2_BASE, TIMER_A, 120);
-    MAP_TimerLoadSet(TIMER2_BASE, TIMER_A, adc_period_us);
     MAP_IntEnable(INT_TIMER2A);
-    MAP_TimerEnable(TIMER2_BASE, TIMER_A);
+
+    MAP_TimerConfigure(TIMER3_BASE,
+                       TIMER_CFG_SPLIT_PAIR | TIMER_CFG_A_PERIODIC);
+    MAP_TimerIntEnable(TIMER3_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_TimerPrescaleSet(TIMER3_BASE, TIMER_A, 120);
+    MAP_TimerLoadSet(TIMER3_BASE, TIMER_A, svm_period_us);
+    MAP_IntEnable(INT_TIMER3A);
+    MAP_TimerEnable(TIMER3_BASE, TIMER_A);
 }
 
 void mainThread(void* arg0) {
@@ -112,60 +118,58 @@ void mainThread(void* arg0) {
 }
 
 SystemState* state = SystemState::get();
-static int duty_state_counter = 0;
-PhaseVoltageLevel duty_levels[3 + 3] = {0, 0, 0, 0, 0, 0};
-float32_t duty_cycles[3 + 3] = {0.5, 0.25, 0.25, 0.5, 0.25, 0.25};
-
-volatile uint8_t ping_pong_offset = 0;
+PhaseVoltageLevel duty_levels[3] = {0, 0, 0};
+float32_t duty_cycles[3] = {0.5, 0.25, 0.25};
 
 void TIMER0A_IRQHandler(void) {
+    // PWM 1
     MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_5, GPIO_PIN_5);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_0, GPIO_PIN_0);
 
-    if (duty_state_counter % 3 == 0) {
-        if (ping_pong_offset == 3) {
-            ping_pong_offset = 0;
-        } else {
-            ping_pong_offset = 3;
-        }
-    }
-
-    int8_t duty_index = (duty_state_counter % 3) + ping_pong_offset;
-
-    PhaseVoltageLevel levels = duty_levels[duty_index];
+    PhaseVoltageLevel levels = duty_levels[0];
     MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[levels.a]);
     MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[levels.b]);
     MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[levels.c]);
 
-    uint16_t val = duty_cycles[duty_index] * pwm_period_us;
-
-    // Configure the timer for next go
-    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, val);
-
-    duty_state_counter = (duty_state_counter + 1) % (3 * pwm_period_div);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_5, 0);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_0, 0);
 }
 
 void TIMER1A_IRQHandler(void) {
+    // PWM 2
     MAP_TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1, GPIO_PIN_1);
+
+    PhaseVoltageLevel levels = duty_levels[1];
+    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[levels.a]);
+    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[levels.b]);
+    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[levels.c]);
+
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1, 0);
+}
+
+void TIMER2A_IRQHandler(void) {
+    // PWM 3
+    MAP_TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_2, GPIO_PIN_2);
+
+    PhaseVoltageLevel levels = duty_levels[2];
+    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[levels.a]);
+    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[levels.b]);
+    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[levels.c]);
+
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_2, 0);
+}
+
+void TIMER3A_IRQHandler(void) {
+    MAP_TimerIntClear(TIMER3_BASE, TIMER_TIMA_TIMEOUT);
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_PIN_6);
     svm_control_loop();
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, 0);
 }
 
-void TIMER2A_IRQHandler(void) {
-    MAP_TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, 0);
-    // TODO(akremor): Put current readings here
-}
-
 float32_t prev_adc[5];
 
 void svm_control_loop() {
-    // MAP_TimerSynchronize(TIMER0_BASE,
-    //                         TIMER_0A_SYNC | TIMER_1A_SYNC | TIMER_2A_SYNC);
-
     system_time_us += svm_period_us;
 
     float32_t sinVal, cosVal;
@@ -209,13 +213,19 @@ void svm_control_loop() {
         Iqcontrol = Iq;
     }
 
-    int offset = 0;
-    if (ping_pong_offset == 3) {
-        offset = 0;
-    } else {
-        offset = 3;
-    }
+    svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, duty_levels,
+                  duty_cycles);
 
-    svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, duty_levels + offset,
-                  duty_cycles + offset);
+    // Load up the three state configs
+
+    // The indexing here intentionally looks wrong
+    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, 0);
+    MAP_TimerLoadSet(TIMER1_BASE, TIMER_A, duty_cycles[0] * pwm_period_us);
+    MAP_TimerLoadSet(TIMER2_BASE, TIMER_A,
+                     (duty_cycles[0] + duty_cycles[1]) * pwm_period_us);
+    MAP_TimerLoadSet(TIMER3_BASE, TIMER_A, svm_period_us - 25);
+
+    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
+    MAP_TimerEnable(TIMER1_BASE, TIMER_A);
+    MAP_TimerEnable(TIMER2_BASE, TIMER_A);
 }
