@@ -5,8 +5,8 @@
 
 constexpr bool use_closed_loop = true;
 
-constexpr float32_t Kp = 10;
-constexpr float32_t Ki = 0.001;
+constexpr float32_t Kp = 1;
+constexpr float32_t Ki = 0.00;
 constexpr float32_t Kd = 0;
 
 constexpr uint32_t system_clock_mhz = 120;
@@ -20,16 +20,14 @@ static const uint32_t chopper_rising_dead_band_ns = 3600;
 static const uint32_t chopper_falling_dead_band_ns = 3600;
 
 // Internal reference generation
-static constexpr uint16_t svm_period_us = 100;
+static constexpr uint16_t svm_period_us = 200;
 static constexpr uint16_t adc_period_us = 50;  // Not used
 static constexpr int16_t pwm_period_div = 1;
 static constexpr int16_t pwm_period_us = svm_period_us / pwm_period_div;
 static constexpr int32_t n_levels = 3;
 static constexpr float32_t Vdc = 1;
-static constexpr float32_t magnitude = 1;  // 200mA current control
+static constexpr float32_t magnitude = 2;  // 200mA current control
 static constexpr float32_t fundamental_frequency_hz = 50;
-constexpr float32_t omega = 2.0 * PI * fundamental_frequency_hz * 1E-6;
-constexpr uint32_t omega_period = 1 / omega;
 
 enum hb_pin {
     A_POS1 = 0x01,  // PL0

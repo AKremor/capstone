@@ -199,11 +199,11 @@ void svm_control_loop() {
     system_time_us += svm_period_us;
 
     float32_t sinVal, cosVal;
-    arm_sin_cos_f32(omega * system_time_us, &sinVal, &cosVal);
-
+    arm_sin_cos_f32(360 * fundamental_frequency_hz * system_time_us * 1E-6, &sinVal,
+                    &cosVal);
 
     // Bias current readings appropriately
-     abc_quantity quantity_current = {
+    abc_quantity quantity_current = {
         (current_history[1][1] + current_history[2][1] +
          current_history[3][1]) /
             3,
@@ -215,22 +215,16 @@ void svm_control_loop() {
             3,
     };
 
-    volatile abc_quantity reference_value = SineWave::getValueAbc(system_time_us);
-
-    volatile float32_t Ialpha = 0, Ibeta = 0;
-    arm_clarke_f32(reference_value.a, reference_value.b, (float32_t*)&Ialpha, (float32_t*)&Ibeta);
-
-    volatile float32_t Id = 0, Iq = 0;
-    arm_park_f32(Ialpha, Ibeta, (float32_t*)&Id, (float32_t*)&Iq, sinVal, cosVal);
+    volatile float32_t Id = 1;
+    volatile float32_t Iq = 0;
 
     abc_quantity load_line_current = quantity_current;
-
     volatile float32_t Ialphasense = 0, Ibetasense = 0;
-    arm_clarke_f32(load_line_current.a, load_line_current.b, (float32_t*)&Ialphasense,
-                   (float32_t*) &Ibetasense);
-
+    arm_clarke_f32(load_line_current.a, load_line_current.b,
+                   (float32_t*)&Ialphasense, (float32_t*)&Ibetasense);
     volatile float32_t Idsense = 0, Iqsense = 0;
-    arm_park_f32(Ialphasense, Ibetasense, (float32_t*)&Idsense, (float32_t*)&Iqsense, sinVal, cosVal);
+    arm_park_f32(Ialphasense, Ibetasense, (float32_t*)&Idsense,
+                 (float32_t*)&Iqsense, sinVal, cosVal);
 
     volatile dq0_quantity pid_error = {Id - Idsense, Iq - Iqsense, 0};
 
