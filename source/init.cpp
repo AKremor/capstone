@@ -10,7 +10,8 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
-static uint32_t system_time = 0;
+
+static uint64_t system_time_us = 0;
 
 arm_pid_instance_f32 PID_d;
 arm_pid_instance_f32 PID_q;
@@ -49,22 +50,12 @@ void init_hbridge_io() {
                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 };
 
-void SysTick_Handler(void) {
-    system_time++;
-    system_time = system_time % omega_period;
-}
-
 void init_timers() {
-    // Configure the system tick timer at 1us for timing
-    MAP_SysTickPeriodSet(120);  // Timing in 1us
-    MAP_SysTickIntEnable();
-    MAP_SysTickEnable();
-
     // All timers are configured to have a tick period of 1us
 
     // Timer 0 -> PWM
     // Timer 1 -> SVM
-    // Timer 2 -> ADC (if not in SVM loop)
+    // Timer 2 -> ADC (if not in SVM loop which it currently is)
 
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
     while (!(SysCtlPeripheralReady(SYSCTL_PERIPH_TIMER0))) {
@@ -138,21 +129,36 @@ void TIMER0A_IRQHandler(void) {
         memcpy(&duty_levels_current, &duty_levels_next,
                3 * sizeof(PhaseVoltageLevel));
         memcpy(&duty_cycles_current, &duty_cycles_next, 3 * sizeof(float32_t));
+        // TODO(akremor): Unsure if this is the correct implementation
+        MAP_TimerSynchronize(TIMER0_BASE,
+                             TIMER_0A_SYNC | TIMER_1A_SYNC | TIMER_2A_SYNC);
     }
 
-    state->a_phase = duty_levels_current[duty_state_counter].a;
-    state->b_phase = duty_levels_current[duty_state_counter].b;
-    state->c_phase = duty_levels_current[duty_state_counter].c;
+    state->a_phase = duty_levels_current[duty_state_counter % 3].a;
+    state->b_phase = duty_levels_current[duty_state_counter % 3].b;
+    state->c_phase = duty_levels_current[duty_state_counter % 3].c;
 
     MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state->a_phase]);
     MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
     MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
 
-    uint16_t val = duty_cycles_current[duty_state_counter] * pwm_period_us;
+    /*
+    MAP_UARTCharPutNonBlocking(UART2_BASE, 'A');
+    MAP_UARTCharPutNonBlocking(UART2_BASE, 'a');
+    MAP_UARTCharPutNonBlocking(UART2_BASE,
+                               duty_levels_current[duty_state_counter % 3].a);
+    MAP_UARTCharPutNonBlocking(UART2_BASE,
+                               duty_levels_current[duty_state_counter % 3].b);
+    MAP_UARTCharPutNonBlocking(UART2_BASE,
+                               duty_levels_current[duty_state_counter % 3].c);
+                               */
+
+    uint16_t val = duty_cycles_current[duty_state_counter % 3] * pwm_period_us /
+                   pwm_freq_div;
     // Configure the timer for next go
     MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, val);
 
-    duty_state_counter = (duty_state_counter + 1) % 3;
+    duty_state_counter = (duty_state_counter + 1) % (3 * pwm_freq_div);
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_5, 0);
 }
 
@@ -173,8 +179,10 @@ void TIMER2A_IRQHandler(void) {
 float32_t prev_adc[5];
 
 void svm_control_loop() {
+    system_time_us += svm_period_us;
+
     float32_t sinVal, cosVal;
-    arm_sin_cos_f32(omega * system_time, &sinVal, &cosVal);
+    arm_sin_cos_f32(omega * system_time_us, &sinVal, &cosVal);
 
     float32_t adc_readings[5];
     read_adc(adc_readings);
@@ -186,7 +194,7 @@ void svm_control_loop() {
         (float32_t)(2 * ((adc_readings[2] + prev_adc[2]) / 2.0 - 1.6f))};
     memcpy(prev_adc, adc_readings, 5 * sizeof(float32_t));
 
-    abc_quantity reference_value = SineWave::getValueAbc(system_time);
+    abc_quantity reference_value = SineWave::getValueAbc(system_time_us);
 
     float32_t Ialpha = 0, Ibeta = 0;
     arm_clarke_f32(reference_value.a, reference_value.b, &Ialpha, &Ibeta);

@@ -23,11 +23,12 @@ static const uint32_t chopper_falling_dead_band_ns = 3600;
 // Internal reference generation
 static constexpr uint16_t svm_period_us = 50;
 static constexpr uint16_t adc_period_us = 50;
-static constexpr int32_t n_levels = 3;
+static constexpr int16_t pwm_freq_div = 2;
+static constexpr int32_t n_levels = 9;
 static constexpr float32_t Vdc = 1;
-static constexpr float32_t magnitude = 2;  // 200mA current control
+static constexpr float32_t magnitude = 8;  // 200mA current control
 static constexpr float32_t fundamental_frequency_hz = 100;
-constexpr uint32_t pwm_period_us = 500;
+constexpr uint32_t pwm_period_us = 1000;
 constexpr float32_t omega = 2.0 * PI * fundamental_frequency_hz * 1E-6;
 constexpr uint32_t omega_period = 1 / omega;
 
@@ -66,14 +67,13 @@ enum hb_pin {
 
 // 3 level
 
-
+/*
 constexpr uint8_t svm_phase_levels_a[] = {A_NEG1, A_OFF1, A_POS1};
 constexpr uint8_t svm_phase_levels_b[] = {B_NEG1, B_OFF1, B_POS1};
 constexpr uint8_t svm_phase_levels_c[] = {C_NEG1, C_OFF1, C_POS1};
-
+*/
 // 9 level
 
-/*
 constexpr uint8_t svm_phase_levels_a[] = {
     A_NEG3 | A_NEG1, A_NEG3 | A_OFF1, A_NEG3 | A_POS1,
     A_OFF3 | A_NEG1, A_OFF3 | A_OFF1, A_OFF3 | A_POS1,
@@ -86,4 +86,3 @@ constexpr uint8_t svm_phase_levels_c[] = {
     C_NEG3 | C_NEG1, C_NEG3 | C_OFF1, C_NEG3 | C_POS1,
     C_OFF3 | C_NEG1, C_OFF3 | C_OFF1, C_OFF3 | C_POS1,
     C_POS3 | C_NEG1, C_POS3 | C_OFF1, C_POS3 | C_POS1};
-*/
