@@ -10,7 +10,6 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
-
 static uint64_t system_time_us = 0;
 
 arm_pid_instance_f32 PID_d;
@@ -114,51 +113,36 @@ void mainThread(void* arg0) {
 
 SystemState* state = SystemState::get();
 static int duty_state_counter = 0;
-PhaseVoltageLevel duty_levels_current[3] = {0, 0, 0};
-PhaseVoltageLevel duty_levels_next[3] = {0, 0, 0};
+PhaseVoltageLevel duty_levels[3 + 3] = {0, 0, 0, 0, 0, 0};
+float32_t duty_cycles[3 + 3] = {0.5, 0.25, 0.25, 0.5, 0.25, 0.25};
 
-float32_t duty_cycles_current[3] = {1, 1, 1};
-float32_t duty_cycles_next[3] = {1, 1, 1};
+volatile uint8_t ping_pong_offset = 0;
 
 void TIMER0A_IRQHandler(void) {
     MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_5, GPIO_PIN_5);
 
-    // TODO we will run junk data for the very first sample period Ts
-    if (duty_state_counter == 0) {
-        memcpy(&duty_levels_current, &duty_levels_next,
-               3 * sizeof(PhaseVoltageLevel));
-        memcpy(&duty_cycles_current, &duty_cycles_next, 3 * sizeof(float32_t));
-        // TODO(akremor): Unsure if this is the correct implementation
-        MAP_TimerSynchronize(TIMER0_BASE,
-                             TIMER_0A_SYNC | TIMER_1A_SYNC | TIMER_2A_SYNC);
+    if (duty_state_counter % 3 == 0) {
+        if (ping_pong_offset == 3) {
+            ping_pong_offset = 0;
+        } else {
+            ping_pong_offset = 3;
+        }
     }
 
-    state->a_phase = duty_levels_current[duty_state_counter % 3].a;
-    state->b_phase = duty_levels_current[duty_state_counter % 3].b;
-    state->c_phase = duty_levels_current[duty_state_counter % 3].c;
+    int8_t duty_index = (duty_state_counter % 3) + ping_pong_offset;
 
-    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[state->a_phase]);
-    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[state->b_phase]);
-    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[state->c_phase]);
+    PhaseVoltageLevel levels = duty_levels[duty_index];
+    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[levels.a]);
+    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, svm_phase_levels_b[levels.b]);
+    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, svm_phase_levels_c[levels.c]);
 
-    /*
-    MAP_UARTCharPutNonBlocking(UART2_BASE, 'A');
-    MAP_UARTCharPutNonBlocking(UART2_BASE, 'a');
-    MAP_UARTCharPutNonBlocking(UART2_BASE,
-                               duty_levels_current[duty_state_counter % 3].a);
-    MAP_UARTCharPutNonBlocking(UART2_BASE,
-                               duty_levels_current[duty_state_counter % 3].b);
-    MAP_UARTCharPutNonBlocking(UART2_BASE,
-                               duty_levels_current[duty_state_counter % 3].c);
-                               */
+    uint16_t val = duty_cycles[duty_index] * pwm_period_us;
 
-    uint16_t val = duty_cycles_current[duty_state_counter % 3] * pwm_period_us /
-                   pwm_freq_div;
     // Configure the timer for next go
     MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, val);
 
-    duty_state_counter = (duty_state_counter + 1) % (3 * pwm_freq_div);
+    duty_state_counter = (duty_state_counter + 1) % (3 * pwm_period_div);
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_5, 0);
 }
 
@@ -179,6 +163,9 @@ void TIMER2A_IRQHandler(void) {
 float32_t prev_adc[5];
 
 void svm_control_loop() {
+    // MAP_TimerSynchronize(TIMER0_BASE,
+    //                         TIMER_0A_SYNC | TIMER_1A_SYNC | TIMER_2A_SYNC);
+
     system_time_us += svm_period_us;
 
     float32_t sinVal, cosVal;
@@ -222,10 +209,13 @@ void svm_control_loop() {
         Iqcontrol = Iq;
     }
 
-    PhaseVoltageLevel levels[3];
-    float32_t duty_cycle[3];
-    svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, levels, duty_cycle);
+    int offset = 0;
+    if (ping_pong_offset == 3) {
+        offset = 0;
+    } else {
+        offset = 3;
+    }
 
-    memcpy(duty_cycles_next, duty_cycle, 3 * sizeof(float32_t));
-    memcpy(duty_levels_next, levels, 3 * sizeof(PhaseVoltageLevel));
+    svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, duty_levels + offset,
+                  duty_cycles + offset);
 }
