@@ -28,19 +28,15 @@ void init_adc() {
     MAP_ADCSequenceStepConfigure(ADC0_BASE, sequencer_2, 0, ADC_CTL_CH3);
     MAP_ADCSequenceStepConfigure(ADC0_BASE, sequencer_2, 1, ADC_CTL_CH2);
     MAP_ADCSequenceStepConfigure(ADC0_BASE, sequencer_2, 2,
-                             ADC_CTL_CH1 | ADC_CTL_IE | ADC_CTL_END);
+                                 ADC_CTL_CH1 | ADC_CTL_IE | ADC_CTL_END);
 
-    /* Enable sample sequence 2 with a processor signal trigger.  Sequencer 2
-     * will do a single sample when the processor sends a signal to start the
-     * conversion */
-    MAP_ADCSequenceConfigure(ADC0_BASE, sequencer_2, ADC_TRIGGER_PROCESSOR, 2);
+    MAP_ADCSequenceConfigure(ADC0_BASE, 2, ADC_TRIGGER_TIMER, 2);
 
-    /* Since sample sequence 2 is now configured, it must be enabled. */
-    MAP_ADCSequenceEnable(ADC0_BASE, sequencer_2);
+    MAP_ADCSequenceEnable(ADC0_BASE, 2);
 
-    /* Clear the interrupt status flag.  This is done to make sure the
-     * interrupt flag is cleared before we sample. */
-    MAP_ADCIntClear(ADC0_BASE, sequencer_2);
+    MAP_ADCIntClear(ADC0_BASE, 2);
+    MAP_ADCIntEnable(ADC0_BASE, 2);
+    MAP_IntEnable(INT_ADC0SS2);
 }
 
 float32_t convertAdjustedSingle(int32_t raw_sample) {
@@ -49,18 +45,5 @@ float32_t convertAdjustedSingle(int32_t raw_sample) {
 }
 
 void read_adc(float32_t* reading) {
-    uint32_t getADCValue[n_channels];
 
-    MAP_ADCProcessorTrigger(ADC0_BASE, sequencer_2);
-
-    // Wait for conversion complete interrupt
-    while (!MAP_ADCIntStatus(ADC0_BASE, sequencer_2, false)) {
-    }
-
-    MAP_ADCIntClear(ADC0_BASE, sequencer_2);
-
-    MAP_ADCSequenceDataGet(ADC0_BASE, sequencer_2, getADCValue);
-    for (int i = 0; i < n_channels; i++) {
-        reading[i] = convertAdjustedSingle(getADCValue[i]);
-    }
 }
