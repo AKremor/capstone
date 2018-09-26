@@ -6,7 +6,7 @@
 constexpr bool use_closed_loop = true;
 
 constexpr float32_t Kp = 1;
-constexpr float32_t Ki = 0.00;
+constexpr float32_t Ki = 0.0;
 constexpr float32_t Kd = 0;
 
 constexpr uint32_t system_clock_mhz = 120;
