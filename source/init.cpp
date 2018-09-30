@@ -218,7 +218,6 @@ void svm_control_loop() {
     volatile float32_t Id = 1;
     volatile float32_t Iq = 0;
 
-
     abc_quantity load_line_current = quantity_current;
     volatile float32_t Ialphasense = 0, Ibetasense = 0;
     arm_clarke_f32(load_line_current.a, load_line_current.b,
@@ -262,8 +261,6 @@ void ADC0SS2_IRQHandler(void) {
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
 
     uint32_t adc_digital_value[3];
-
-    // TODO Produce the actual float values
 
     MAP_ADCIntClear(ADC0_BASE, 2);
     MAP_ADCSequenceDataGet(ADC0_BASE, 2, adc_digital_value);
