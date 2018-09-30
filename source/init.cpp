@@ -215,16 +215,9 @@ void svm_control_loop() {
             3,
     };
 
-    volatile float32_t Id = 0.3;
+    volatile float32_t Id = 1;
     volatile float32_t Iq = 0;
 
-    if (system_time_us > 1E4 * 1) {
-        Id = 0.7;
-    }
-
-    if (system_time_us > 1E4 * 2) {
-        Id = 0.5;
-    }
 
     abc_quantity load_line_current = quantity_current;
     volatile float32_t Ialphasense = 0, Ibetasense = 0;

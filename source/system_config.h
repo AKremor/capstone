@@ -6,7 +6,7 @@
 constexpr bool use_closed_loop = true;
 
 constexpr float32_t Kp = 1;
-constexpr float32_t Ki = 0.0;
+constexpr float32_t Ki = 12;
 constexpr float32_t Kd = 0;
 
 constexpr uint32_t system_clock_mhz = 120;
@@ -27,7 +27,7 @@ static constexpr int16_t pwm_period_us = svm_period_us / pwm_period_div;
 static constexpr int32_t n_levels = 3;
 static constexpr float32_t Vdc = 1;
 static constexpr float32_t magnitude = 2;  // 200mA current control
-static constexpr float32_t fundamental_frequency_hz = 50;
+static constexpr float32_t fundamental_frequency_hz = 100;
 
 enum hb_pin {
     A_POS1 = 0x01,  // PL0
