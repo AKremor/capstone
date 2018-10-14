@@ -18,10 +18,9 @@ class LiveFFTWidget(QtGui.QWidget):
         QtGui.QWidget.__init__(self)
         self.buffer_size = 1000
         self.timewindow = 10
-        self.x = np.linspace(-self.timewindow, 0.0, self.buffer_size)
-        self.y = np.zeros(self.buffer_size, dtype=np.float)
-        self.databuffer = collections.deque([0.0]*self.buffer_size, self.buffer_size)
-        self.givedata_buffer = None
+
+        self.fft_data = np.zeros(self.buffer_size, dtype=np.float)
+        self.freq_vect = np.zeros(self.buffer_size, dtype=np.float)
         
         # customize the UI
         self.initUI()
@@ -29,7 +28,7 @@ class LiveFFTWidget(QtGui.QWidget):
         # QTimer
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateplot)
-        self.timer.start(1)
+        self.timer.start(100)
 
     def initUI(self):
         self.lay = QVBoxLayout(self)
@@ -37,34 +36,19 @@ class LiveFFTWidget(QtGui.QWidget):
         self.plotter.showGrid(x=True, y=True)
         self.plotter.setLabel('left', 'Amplitude', 'A')
         self.plotter.setLabel('bottom', 'Frequency', 'Hz')
-        self.curve = self.plotter.plot(self.x, self.y, pen=(255,0,0))
+        self.curve = self.plotter.plot(self.freq_vect, self.fft_data, pen=(255,0,0))
         self.lay.addWidget(self.plotter)
 
     def updateplot(self):
 
-        if self.givedata_buffer is None:
+        if self.fft_data is None:
             return
-        # If we haven't received data to givedata_buffer
-        self.databuffer.append( self.givedata_buffer )
+        self.curve.setData(self.freq_vect, self.fft_data)
+        self.fft_data = None
 
-        self.y[:] = self.databuffer
-        fft_data = np.abs(np.fft.rfft(self.y))
-        freq_vect = np.fft.rfftfreq(1000, 1000)
-
-        self.curve.setData(freq_vect, fft_data)
-
-    def data_wrapper(self, func, *args, **kwargs):
-            def wrapped(*args, **kwargs):
-                while True:
-                    res = func(*args, **kwargs)
-                    time.sleep(float(self._interval) / 1000)
-                    self.givedata(res)
-
-            return wrapped
-
-    def give_data(self, data):
-        self.givedata_buffer = data
-        # Takes in a y value, update to take in time TODO
+    def give_data(self, freq_vect, fft_data):
+        self.fft_data = fft_data
+        self.freq_vect = freq_vect
 
 class LiveSVMWidget(QtGui.QWidget):
     def __init__(self):
@@ -205,24 +189,29 @@ class Inverter(QtGui.QWidget):
 
 
 def gen_data(parents, magnitude, frequency, max_noise, svm_plane):
+    databuffer = collections.deque([0.0] * 1000, 1000)
     while True:
-        time.sleep(float(1) / 1000)
+        time.sleep(float(10) / 1000)
         noise = random.normalvariate(0., max_noise)
         freq = frequency.value()
-        print(freq)
-        #freq = 0.1
+
         new = magnitude.value()*math.sin(time.time()*2*freq *math.pi) + noise
         newb = magnitude.value()*math.sin(time.time()*2*freq *math.pi - 2 * math.pi/3) + noise
         newc = magnitude.value()*math.sin(time.time()*2*freq *math.pi + 2 * math.pi/3) + noise
-        for parent in parents:
-            parent.give_data(new)
+
+        parents[0].give_data(new)
+
+        databuffer.append(new)
+        fft_data = np.abs(np.fft.rfft(databuffer))
+        freq_vect = np.fft.rfftfreq(1000, 1000)
+        parents[1].give_data(freq_vect, fft_data)
 
         # calculate the gh value
         newa = new
         Vdc = 1
 
-        g = 1 / (3 * Vdc) * (2 * newa - newb - newc);
-        h = 1 / (3 * Vdc) * (-1 * newa + 2 * newb - newc);
+        g = 1 / (3 * Vdc) * (2 * newa - newb - newc)
+        h = 1 / (3 * Vdc) * (-1 * newa + 2 * newb - newc)
         svm_plane.set_ref_vector(g, h)
 
 if __name__ == '__main__':
@@ -234,7 +223,7 @@ if __name__ == '__main__':
     th = threading.Thread(target=gen_data,
                    kwargs={'frequency': plt.fixedFreqSlider,
                            'magnitude': plt.magSlider,
-                           'max_noise': 0,
+                           'max_noise': 0.1,
                            'parents': [plt.current_plot, plt.current_fft],
                            'svm_plane': plt.svm_plane})
     th.daemon = True
