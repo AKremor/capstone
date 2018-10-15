@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "arm_math.h"
 
-constexpr bool use_closed_loop = true;
+constexpr bool use_closed_loop = false;
 
 constexpr float32_t Kp = 1;
 constexpr float32_t Ki = 12;
@@ -24,7 +24,7 @@ static constexpr uint16_t svm_period_us = 200;
 static constexpr uint16_t adc_period_us = 50;  // Not used
 static constexpr int16_t pwm_period_div = 1;
 static constexpr int16_t pwm_period_us = svm_period_us / pwm_period_div;
-static constexpr int32_t n_levels = 3;
+static constexpr int32_t n_levels = 9;
 static constexpr float32_t Vdc = 1;
 static constexpr float32_t magnitude = 2;  // 200mA current control
 static constexpr float32_t fundamental_frequency_hz = 100;
@@ -64,13 +64,15 @@ enum hb_pin {
 
 // 3 level
 
+/*
 constexpr uint8_t svm_phase_levels_a[] = {A_NEG1, A_OFF1, A_POS1};
 constexpr uint8_t svm_phase_levels_b[] = {B_NEG1, B_OFF1, B_POS1};
 constexpr uint8_t svm_phase_levels_c[] = {C_NEG1, C_OFF1, C_POS1};
+*/
 
 // 9 level
 
-/*
+
 constexpr uint8_t svm_phase_levels_a[] = {
     A_NEG3 | A_NEG1, A_NEG3 | A_OFF1, A_NEG3 | A_POS1,
     A_OFF3 | A_NEG1, A_OFF3 | A_OFF1, A_OFF3 | A_POS1,
@@ -83,4 +85,3 @@ constexpr uint8_t svm_phase_levels_c[] = {
     C_NEG3 | C_NEG1, C_NEG3 | C_OFF1, C_NEG3 | C_POS1,
     C_OFF3 | C_NEG1, C_OFF3 | C_OFF1, C_OFF3 | C_POS1,
     C_POS3 | C_NEG1, C_POS3 | C_OFF1, C_POS3 | C_POS1};
-*/

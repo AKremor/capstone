@@ -3,47 +3,74 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
-constexpr uint8_t n_channels = 3;
-constexpr uint8_t sequencer_2 = 2;
+void clearSpiFifo();
+void adcSelect();
+void adcDeselect();
 
 void init_adc() {
-    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOE))) {
+    // The SSI1 peripheral must be disabled, reset and re enabled for use
+    // Wait till the Peripheral ready is not asserted
+    MAP_SysCtlPeripheralDisable(SYSCTL_PERIPH_SSI2);
+    MAP_SysCtlPeripheralReset(SYSCTL_PERIPH_SSI2);
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI2);
+
+    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_SSI2))) {
     }
 
-    MAP_GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_0);  // AIN3
-    MAP_GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_1);  // AIN2
-    MAP_GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_2);  // AIN1
-
-    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
-    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_ADC0))) {
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOD))) {
     }
 
-    // Deals with errata ADC#14, otherwise first two samples are invalid
-    MAP_SysCtlPeripheralReset(SYSCTL_PERIPH_ADC0);
-    while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_ADC0))) {
-    }
+    MAP_GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
+    MAP_GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
+    MAP_GPIOPinConfigure(GPIO_PD2_SSI2FSS);
+    MAP_GPIOPinConfigure(GPIO_PD3_SSI2CLK);
 
-    // Read in order of AIN increasing
-    MAP_ADCSequenceStepConfigure(ADC0_BASE, sequencer_2, 0, ADC_CTL_CH3);
-    MAP_ADCSequenceStepConfigure(ADC0_BASE, sequencer_2, 1, ADC_CTL_CH2);
-    MAP_ADCSequenceStepConfigure(ADC0_BASE, sequencer_2, 2,
-                                 ADC_CTL_CH1 | ADC_CTL_IE | ADC_CTL_END);
+    MAP_GPIOPinTypeSSI(GPIO_PORTD_BASE,
+                       GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 
-    MAP_ADCSequenceConfigure(ADC0_BASE, 2, ADC_TRIGGER_TIMER, 2);
+    MAP_SSIConfigSetExpClk(SSI2_BASE, 120E6, SSI_FRF_MOTO_MODE_0,
+                           SSI_MODE_MASTER, (120E6 / 120), 16);
 
-    MAP_ADCSequenceEnable(ADC0_BASE, 2);
+    SSI2->CR1 |= SSI_CR1_HSCLKEN;
+    MAP_SSIEnable(SSI2_BASE);
 
-    MAP_ADCIntClear(ADC0_BASE, 2);
-    MAP_ADCIntEnable(ADC0_BASE, 2);
-    MAP_IntEnable(INT_ADC0SS2);
+    clearSpiFifo();
+
+    // TODO Can I always assert CS?
+    MAP_GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_7);
+
+    // Set up for auto channel scan mode
+    // AUTO RST command
+    adcSelect();
+    MAP_SSIDataPut(SSI2_BASE, 0xA000);
+    adcDeselect();
 }
 
-float32_t convertAdjustedSingle(int32_t raw_sample) {
-    float refVoltage = 3.3f;
-    return refVoltage * (((float)raw_sample) / 0x1000);
+void adcReadChannels(float* channel_data) {
+    uint32_t junk_data[1];
+    uint32_t data[1];
+    uint8_t n_channels = 8;
+
+    for (int i = 0; i < n_channels; i++) {
+        adcSelect();
+        MAP_SSIDataPut(SSI2_BASE, 0x00);
+        MAP_SSIDataGet(SSI2_BASE, junk_data);
+        MAP_SSIDataPut(SSI2_BASE, 0x00);
+        MAP_SSIDataGet(SSI2_BASE, data);
+        adcDeselect();
+
+        // Now do the conversion... TODO
+        channel_data[i] = data[0];
+    }
 }
 
-void read_adc(float32_t* reading) {
+void adcSelect() { GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_7, 0x00); }
 
+void adcDeselect() { GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_7, GPIO_PIN_7); }
+
+void clearSpiFifo() {
+    uint32_t dummyRead[1];
+    while (MAP_SSIDataGetNonBlocking(SSI2_BASE, &dummyRead[0])) {
+    }
 }

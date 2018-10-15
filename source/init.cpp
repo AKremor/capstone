@@ -138,7 +138,7 @@ float32_t duty_cycles[3] = {0.5, 0.25, 0.25};
 void TIMER0A_IRQHandler(void) {
     // PWM 1
     MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_0, GPIO_PIN_0);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1, GPIO_PIN_1);
 
     PhaseVoltageLevel levels = duty_levels[0];
     MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[levels.a]);
@@ -148,13 +148,13 @@ void TIMER0A_IRQHandler(void) {
     MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, adc_s1_fire);
     MAP_TimerEnable(TIMER4_BASE, TIMER_A);
 
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_0, 0);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1, 0);
 }
 
 void TIMER1A_IRQHandler(void) {
     // PWM 2
     MAP_TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1, GPIO_PIN_1);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_2, GPIO_PIN_2);
 
     PhaseVoltageLevel levels = duty_levels[1];
     MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[levels.a]);
@@ -164,13 +164,13 @@ void TIMER1A_IRQHandler(void) {
     MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, adc_s2_fire);
     MAP_TimerEnable(TIMER4_BASE, TIMER_A);
 
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1, 0);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_2, 0);
 }
 
 void TIMER2A_IRQHandler(void) {
     // PWM 3
     MAP_TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_2, GPIO_PIN_2);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_3, GPIO_PIN_3);
 
     PhaseVoltageLevel levels = duty_levels[2];
     MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, svm_phase_levels_a[levels.a]);
@@ -180,20 +180,25 @@ void TIMER2A_IRQHandler(void) {
     MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, adc_s3_fire);
     MAP_TimerEnable(TIMER4_BASE, TIMER_A);
 
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_2, 0);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_3, 0);
 }
 
 void TIMER3A_IRQHandler(void) {
+    // SVM Loop
     MAP_TimerIntClear(TIMER3_BASE, TIMER_TIMA_TIMEOUT);
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, GPIO_PIN_6);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_0, GPIO_PIN_0);
     svm_control_loop();
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_6, 0);
+    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_0, 0);
 }
 
 float32_t prev_adc[3] = {0, 0, 0};
 
 float32_t current_history[3][3] = {};
 uint32_t current_history_index = 0;
+
+// THese are the truth source
+float Id_ref = 1;
+float Iq_ref = 0.0;
 
 void svm_control_loop() {
     system_time_us += svm_period_us;
@@ -215,8 +220,8 @@ void svm_control_loop() {
             3,
     };
 
-    volatile float32_t Id = 1;
-    volatile float32_t Iq = 0;
+    volatile float32_t Id = Id_ref;
+    volatile float32_t Iq = Iq_ref;
 
     abc_quantity load_line_current = quantity_current;
     volatile float32_t Ialphasense = 0, Ibetasense = 0;
@@ -240,6 +245,14 @@ void svm_control_loop() {
     svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, duty_levels,
                   duty_cycles);
 
+    state->duty_levels[0] = duty_levels[0];
+    state->duty_levels[1] = duty_levels[1];
+    state->duty_levels[2] = duty_levels[2];
+
+    state->duty_cycles[0] = duty_cycles[0];
+    state->duty_cycles[1] = duty_cycles[1];
+    state->duty_cycles[2] = duty_cycles[2];
+
     // Load up the three state configs
     adc_s1_fire = duty_cycles[0] * pwm_period_us / 2;
     adc_s2_fire = duty_cycles[1] * pwm_period_us / 2;
@@ -255,22 +268,29 @@ void svm_control_loop() {
     MAP_TimerEnable(TIMER0_BASE, TIMER_A);
     MAP_TimerEnable(TIMER1_BASE, TIMER_A);
     MAP_TimerEnable(TIMER2_BASE, TIMER_A);
+
+    send_state_to_simulator();
+    float channel_data[8];
+
+    adcReadChannels(channel_data);
 }
+
+float I_Aa, I_Bb, I_Cc;
 
 void ADC0SS2_IRQHandler(void) {
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
 
     uint32_t adc_digital_value[3];
 
-    MAP_ADCIntClear(ADC0_BASE, 2);
-    MAP_ADCSequenceDataGet(ADC0_BASE, 2, adc_digital_value);
-
-    current_history[current_history_index][0] =
+    /*current_history[current_history_index][0] =
         2 * (convertAdjustedSingle(adc_digital_value[0]) - 1.6f);
     current_history[current_history_index][1] =
         2 * (convertAdjustedSingle(adc_digital_value[1]) - 1.6f);
     current_history[current_history_index][2] =
         2 * (convertAdjustedSingle(adc_digital_value[2]) - 1.6f);
+        */
+
+    // TODO
 
     current_history_index = (current_history_index + 1) % 3;
 
