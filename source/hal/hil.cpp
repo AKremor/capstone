@@ -45,3 +45,40 @@ void send_state_to_simulator() {
         MAP_UARTCharPut(UART3_BASE, buffer[i]);
     }
 }
+
+constexpr int32_t command_code_set_magnitude = 0x01;
+constexpr int32_t command_code_set_frequency = 0x02;
+
+void receive_uart() {
+    // Sync char 1
+    if ('A' != UARTCharGetNonBlocking(UART3_BASE)) {
+        return;
+    }
+
+    if ('a' != UARTCharGet(UART3_BASE)) {
+        return;
+    }
+
+    int32_t length = UARTCharGet(UART3_BASE);
+    int32_t command_code = UARTCharGet(UART3_BASE);
+
+    int32_t buffer[16];
+
+    for (int i = 0; i < length; i++) {
+        buffer[i] = UARTCharGet(UART3_BASE);
+    }
+
+    switch (command_code) {
+        case command_code_set_magnitude: {
+            Id_ref = (float)(buffer[0] << 24 | buffer[1] << 16 |
+                             buffer[2] << 8 | buffer[3] << 0);
+            break;
+        }
+        case command_code_set_frequency: {
+            fundamental_frequency_hz =
+                (float)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 |
+                        buffer[3] << 0);
+            break;
+        }
+    }
+}

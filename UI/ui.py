@@ -102,6 +102,40 @@ class LivePlotWidget(QtGui.QWidget):
         self.givedata_buffer = [a, b, c]
 
 
+class SerialWriter(QObject):
+
+    serial_write_signal = pyqtSignal(object, object, name='serial_write_signal')
+
+    def __init__(self, serial_port):
+        super().__init__()
+        self.serial_port = serial_port
+
+    @pyqtSlot(int)
+    def send_magnitude(self, magnitude):
+        self.send(command_code_set_magnitude, magnitude)
+
+    @pyqtSlot(int)
+    def send_frequency(self, frequency):
+        self.send(command_code_set_frequency, frequency)
+
+    def send(self, command_code, value):
+        if self.serial_port is None:
+            print("Serial port None on writer")
+            return
+
+        self.serial_port.write('A')
+        self.serial_port.write('a')
+        self.serial_port.write(len(5))
+        self.serial_port.write(command_code)
+
+        byte_list = pack('f', value)
+
+        for byte in byte_list:
+            self.serial_port.write(byte)
+
+        app.processEvents()
+
+
 class SerialReader(QObject):
 
     ref_voltage_dq_signal = pyqtSignal(float, float, float, name='ref_voltage_dq')
@@ -205,12 +239,21 @@ class SerialReader(QObject):
             app.processEvents()
 
 
+command_code_set_magnitude = 1
+command_code_set_frequency = 2
+
 class InverterApp(QtGui.QMainWindow, design.Ui_MainWindow):
     def __init__(self):
         super(self.__class__, self).__init__()
         self.setupUi(self)
 
         serial_port = None  # serial.Serial('COM9', 921600)
+
+        self.serial_write_worker = SerialWriter(serial_port)
+        self.serial_write_thread = QThread()
+        self.serial_write_worker.moveToThread(self.serial_write_thread)
+
+        self.serial_write_signal = self.serial_write_worker.serial_write_signal
 
         self.serial_read_worker = SerialReader(serial_port)
         self.serial_read_thread = QThread()
@@ -250,7 +293,10 @@ class InverterApp(QtGui.QMainWindow, design.Ui_MainWindow):
         self.serial_read_worker.level_1_detect_signal.connect(self.update_level_1_detect)
 
         self.magnitude_slider.valueChanged.connect(self.magnitude_number.display)
+        self.magnitude_slider.valueChanged.connect(self.serial_write_worker.send_magnitude)
         self.frequency_slider.valueChanged.connect(self.frequency_number.display)
+        self.frequency_slider.valueChanged.connect(self.serial_write_worker.send_frequency)
+
 
         self.serial_read_thread.start()
 
