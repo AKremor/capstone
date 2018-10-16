@@ -37,6 +37,9 @@ void send_state_to_simulator() {
     memcpy(buffer + 31, &V_cn, 4);
     memcpy(buffer + 35, &Id_error, 4);
     memcpy(buffer + 39, &Iq_error, 4);
+    memcpy(buffer + 40, &level_9_detect, 1);
+    memcpy(buffer + 40, &level_3_detect, 1);
+    memcpy(buffer + 40, &level_1_detect, 1);
 
     for (uint8_t i = 0; i < sizeof(buffer); i++) {
         MAP_UARTCharPut(UART3_BASE, buffer[i]);

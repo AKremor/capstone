@@ -28,7 +28,7 @@ void start_chopper() {
     // desired frequency, and SysClk is the system clock frequency. Note that
     // the maximum period you can set is 2^16 - 1.
     MAP_PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0,
-                        1.0 * system_clock_mhz * 10e6 / chopper_hz);
+                        1.0 * system_clock_mhz * 1e6 / chopper_hz);
 
     // Duty cycle set as a period of counts
     MAP_PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,

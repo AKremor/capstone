@@ -1,21 +1,11 @@
-import sys
-
 from PyQt5.QtCore import QObject, pyqtSlot
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtWidgets import QLineEdit
-from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QApplication, QLabel, QGridLayout,QVBoxLayout,QHBoxLayout,QRadioButton)
-from PyQt5.QtGui import QFont   
+from PyQt5.QtWidgets import QVBoxLayout
 import pyqtgraph as pg
-import random
 import time
 import numpy as np
-import random
 import collections
-import socket
-import threading
 import math
 from pyqtgraph.Qt import QtGui, QtCore
 import serial
@@ -31,6 +21,7 @@ def dq0_transform(v_a, v_b, v_c):
     d = (np.sqrt(2/3)*v_a-(1/(np.sqrt(6)))*v_b-(1/(np.sqrt(6)))*v_c)
     q = ((1/(np.sqrt(2)))*v_b-(1/(np.sqrt(2)))*v_c)
     return d, q
+
 
 class LiveFFTWidget(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -133,6 +124,10 @@ class SerialReader(QObject):
     sensed_voltage_fft_signal = pyqtSignal(object, object, name='sensed_voltage_fft')
     sensed_current_fft_signal = pyqtSignal(object, object, name='sensed_current_fft')
 
+    level_9_detect_signal = pyqtSignal(bool, name='level_9_detect')
+    level_3_detect_signal = pyqtSignal(bool, name='level_3_detect')
+    level_1_detect_signal = pyqtSignal(bool, name='level_1_detect')
+
     def __init__(self, serial_port, buffer_size = 1000):
         super().__init__()
         self.buffer_size = buffer_size
@@ -157,7 +152,6 @@ class SerialReader(QObject):
             print("Read {} bytes".format(len(data)))
             print(data)
 
-            data = [a] * 10
             # Unpack the data
             Id_ref = data[0]
             Iq_ref = data[1]
@@ -169,6 +163,15 @@ class SerialReader(QObject):
             V_cn = data[7]
             Id_error = data[8]
             Iq_error = data[9]
+
+            level_9_detect = data[10]
+            level_3_detect = data[11]
+            level_1_detect = data[12]
+
+            self.level_9_detect_signal.emit(level_9_detect)
+            self.level_3_detect_signal.emit(level_3_detect)
+            self.level_1_detect_signal.emit(level_1_detect)
+
 
         while True:
             time.sleep(0.01)
@@ -200,7 +203,9 @@ class SerialReader(QObject):
             self.sensed_voltage_fft_signal.emit(freq_vect, voltage_fft_data)
             self.sensed_current_fft_signal.emit(freq_vect, current_fft_data)
 
-
+            self.level_9_detect_signal.emit(1)
+            self.level_3_detect_signal.emit(0)
+            self.level_1_detect_signal.emit(1)
 
             app.processEvents()
 
@@ -231,21 +236,40 @@ class InverterApp(QtGui.QMainWindow, design.Ui_MainWindow):
         self.serial_read_worker.sensed_voltage_fft_signal.connect(self.sensed_voltage_fft.take_sample)
         self.serial_read_worker.sensed_current_fft_signal.connect(self.sensed_current_fft.take_sample)
 
-        self.ref_voltage_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Current', 'A'))
+        self.ref_voltage_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Voltage', 'V'))
         self.ref_current_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Current', 'A'))
 
-        self.error_voltage_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Current', 'A'))
+        self.error_voltage_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Voltage', 'V'))
         self.error_current_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Current', 'A'))
 
         self.sensed_current_abc.initUI(3, ['a', 'b', 'c'], ('Time', 's'), ('Current', 'A'))
         self.sensed_current_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Current', 'A'))
         self.sensed_voltage_abc.initUI(3, ['a', 'b', 'c'], ('Time', 's'), ('Voltage', 'V'))
-        self.sensed_voltage_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Current', 'A'))
+        self.sensed_voltage_dq.initUI(2, ['d', 'q'], ('Time', 's'), ('Voltage', 'V'))
 
         self.sensed_voltage_fft.initUI()
         self.sensed_current_fft.initUI()
 
+        self.serial_read_worker.level_9_detect_signal.connect(self.update_level_9_detect)
+        self.serial_read_worker.level_3_detect_signal.connect(self.update_level_3_detect)
+        self.serial_read_worker.level_1_detect_signal.connect(self.update_level_1_detect)
+
+        self.magnitude_slider.valueChanged.connect(self.magnitude_number.display)
+        self.frequency_slider.valueChanged.connect(self.frequency_number.display)
+
         self.serial_read_thread.start()
+
+    @QtCore.pyqtSlot(bool)
+    def update_level_9_detect(self, value):
+        self.level_9_detect.setChecked(value)
+
+    @QtCore.pyqtSlot(bool)
+    def update_level_3_detect(self, value):
+        self.level_3_detect.setChecked(value)
+
+    @QtCore.pyqtSlot(bool)
+    def update_level_1_detect(self, value):
+        self.level_1_detect.setChecked(value)
 
     def run(self):
         self.show()

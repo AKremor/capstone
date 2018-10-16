@@ -17,3 +17,5 @@ extern float Id_ref, Iq_ref;
 extern float V_an, V_bn, V_cn;
 extern float I_Aa, I_Bb, I_Cc;
 extern float Id_error, Iq_error;
+extern uint8_t level_9_detect, level_3_detect,
+    level_1_detect;  // TODO Add to app layer

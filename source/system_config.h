@@ -87,7 +87,18 @@ constexpr uint8_t svm_phase_levels_c[] = {
     C_POS3 | C_NEG1, C_POS3 | C_OFF1, C_POS3 | C_POS1};*/
 
 // 27 level
-constexpr uint32_t svm_phase_levels_a[] = {
+// end up with something like
+A_NEG9 | A_NEG3 | A_NEG1 | B_OFF9 | B_POS3 | B_POS1 | C_POS9 | C_POS3 |
+    C_NEG1 then we regroup as A_NEG9 | B_OFF9 | C_POS9 | A_NEG3 | B_POS3 |
+    C_POS3 | A_NEG1 | B_POS1 |
+    C_NEG1
+
+        splitting into each port Port A
+    : A_NEG9 |
+      B_OFF9 |
+      C_POS9
+
+      constexpr uint32_t svm_phase_levels_a[] = {
     A_NEG9 | A_NEG3 | A_NEG1, A_NEG9 | A_NEG3 | A_OFF1,
     A_NEG9 | A_NEG3 | A_POS1, A_NEG9 | A_OFF3 | A_NEG1,
     A_NEG9 | A_OFF3 | A_OFF1, A_NEG9 | A_OFF3 | A_POS1,
