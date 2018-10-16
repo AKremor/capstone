@@ -38,7 +38,7 @@ void init_adc() {
     clearSpiFifo();
 
     // TODO Can I always assert CS?
-    MAP_GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_7);
+    MAP_GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_6);
 
     // Set up for auto channel scan mode
     // AUTO RST command
@@ -65,9 +65,17 @@ void adcReadChannels(float* channel_data) {
     }
 }
 
-void adcSelect() { GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_7, 0x00); }
+void adcSelect() {
+    SysCtlDelay(120E6 * 0.001);
+    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_6, 0x00);
+    SysCtlDelay(120E6 * 0.001);
+}
 
-void adcDeselect() { GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_7, GPIO_PIN_7); }
+void adcDeselect() {
+    SysCtlDelay(120E6 * 0.001);
+    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_6, GPIO_PIN_6);
+    SysCtlDelay(120E6 * 0.001);
+}
 
 void clearSpiFifo() {
     uint32_t dummyRead[1];

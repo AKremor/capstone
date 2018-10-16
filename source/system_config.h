@@ -24,42 +24,42 @@ static constexpr uint16_t svm_period_us = 200;
 static constexpr uint16_t adc_period_us = 50;  // Not used
 static constexpr int16_t pwm_period_div = 1;
 static constexpr int16_t pwm_period_us = svm_period_us / pwm_period_div;
-static constexpr int32_t n_levels = 9;
+static constexpr int32_t n_levels = 27;
 static constexpr float32_t Vdc = 1;
-static constexpr float32_t magnitude = 2;  // 200mA current control
+static constexpr float32_t magnitude =
+    13;  // 200mA current control. Is this peak or magnitude TODO?
 static constexpr float32_t fundamental_frequency_hz = 100;
 
 enum hb_pin {
     A_POS1 = 0x01,  // PL0
     A_OFF1 = 0x00,  // N/A
     A_NEG1 = 0x02,  // PL1
-    A_POS3 = 0x04,  // PL2
-    A_OFF3 = 0x00,  // N/A
-    A_NEG3 = 0x08,  // PL3
-    A_POS9 = 0x10,  // PL4
-    A_OFF9 = 0x00,  // N/A
-    A_NEG9 = 0x20,  // PL5
-
-    B_POS1 = 0x01,  // PK0
+    B_POS1 = 0x04,  // PL2
     B_OFF1 = 0x00,  // N/A
-    B_NEG1 = 0x02,  // PK1
-    B_POS3 = 0x04,  // PK2
-    B_OFF3 = 0x00,  // N/A
-    B_NEG3 = 0x08,  // PK3
-    B_POS9 = 0x10,  // PK4
-    B_OFF9 = 0x00,  // N/A
-    B_NEG9 = 0x20,  // PK5
-
-    C_POS1 = 0x01,  // PA0
+    B_NEG1 = 0x08,  // PL3
+    C_POS1 = 0x10,  // PL4
     C_OFF1 = 0x00,  // N/A
-    C_NEG1 = 0x02,  // PA1
-    C_POS3 = 0x04,  // PA2
-    C_OFF3 = 0x00,  // N/A
-    C_NEG3 = 0x08,  // PA3
-    C_POS9 = 0x10,  // PA4
-    C_OFF9 = 0x00,  // N/A
-    C_NEG9 = 0x20,  // PA5
+    C_NEG1 = 0x20,  // PL5
 
+    A_POS3 = 0x01 << 8,  // PK0
+    A_OFF3 = 0x00 << 8,  // N/A
+    A_NEG3 = 0x02 << 8,  // PK1
+    B_POS3 = 0x04 << 8,  // PK2
+    B_OFF3 = 0x00 << 8,  // N/A
+    B_NEG3 = 0x08 << 8,  // PK3
+    C_POS3 = 0x10 << 8,  // PK4
+    C_OFF3 = 0x00 << 8,  // N/A
+    C_NEG3 = 0x20 << 8,  // PK5
+
+    A_POS9 = 0x01 << 16,  // PA0
+    A_OFF9 = 0x00 << 16,  // N/A
+    A_NEG9 = 0x02 << 16,  // PA1
+    B_POS9 = 0x04 << 16,  // PA2
+    B_OFF9 = 0x00 << 16,  // N/A
+    B_NEG9 = 0x08 << 16,  // PA3
+    C_POS9 = 0x10 << 16,  // PA4
+    C_OFF9 = 0x00 << 16,  // N/A
+    C_NEG9 = 0x20 << 16,  // PA5
 };
 
 // 3 level
@@ -72,7 +72,7 @@ constexpr uint8_t svm_phase_levels_c[] = {C_NEG1, C_OFF1, C_POS1};
 
 // 9 level
 
-
+/*
 constexpr uint8_t svm_phase_levels_a[] = {
     A_NEG3 | A_NEG1, A_NEG3 | A_OFF1, A_NEG3 | A_POS1,
     A_OFF3 | A_NEG1, A_OFF3 | A_OFF1, A_OFF3 | A_POS1,
@@ -84,4 +84,51 @@ constexpr uint8_t svm_phase_levels_b[] = {
 constexpr uint8_t svm_phase_levels_c[] = {
     C_NEG3 | C_NEG1, C_NEG3 | C_OFF1, C_NEG3 | C_POS1,
     C_OFF3 | C_NEG1, C_OFF3 | C_OFF1, C_OFF3 | C_POS1,
-    C_POS3 | C_NEG1, C_POS3 | C_OFF1, C_POS3 | C_POS1};
+    C_POS3 | C_NEG1, C_POS3 | C_OFF1, C_POS3 | C_POS1};*/
+
+// 27 level
+constexpr uint32_t svm_phase_levels_a[] = {
+    A_NEG9 | A_NEG3 | A_NEG1, A_NEG9 | A_NEG3 | A_OFF1,
+    A_NEG9 | A_NEG3 | A_POS1, A_NEG9 | A_OFF3 | A_NEG1,
+    A_NEG9 | A_OFF3 | A_OFF1, A_NEG9 | A_OFF3 | A_POS1,
+    A_NEG9 | A_POS3 | A_NEG1, A_NEG9 | A_POS3 | A_OFF1,
+    A_NEG9 | A_POS3 | A_POS1, A_OFF9 | A_NEG3 | A_NEG1,
+    A_OFF9 | A_NEG3 | A_OFF1, A_OFF9 | A_NEG3 | A_POS1,
+    A_OFF9 | A_OFF3 | A_NEG1, A_OFF9 | A_OFF3 | A_OFF1,
+    A_OFF9 | A_OFF3 | A_POS1, A_OFF9 | A_POS3 | A_NEG1,
+    A_OFF9 | A_POS3 | A_OFF1, A_OFF9 | A_POS3 | A_POS1,
+    A_POS9 | A_NEG3 | A_NEG1, A_POS9 | A_NEG3 | A_OFF1,
+    A_POS9 | A_NEG3 | A_POS1, A_POS9 | A_OFF3 | A_NEG1,
+    A_POS9 | A_OFF3 | A_OFF1, A_POS9 | A_OFF3 | A_POS1,
+    A_POS9 | A_POS3 | A_NEG1, A_POS9 | A_POS3 | A_OFF1,
+    A_POS9 | A_POS3 | A_POS1};
+constexpr uint32_t svm_phase_levels_b[] = {
+    B_NEG9 | B_NEG3 | B_NEG1, B_NEG9 | B_NEG3 | B_OFF1,
+    B_NEG9 | B_NEG3 | B_POS1, B_NEG9 | B_OFF3 | B_NEG1,
+    B_NEG9 | B_OFF3 | B_OFF1, B_NEG9 | B_OFF3 | B_POS1,
+    B_NEG9 | B_POS3 | B_NEG1, B_NEG9 | B_POS3 | B_OFF1,
+    B_NEG9 | B_POS3 | B_POS1, B_OFF9 | B_NEG3 | B_NEG1,
+    B_OFF9 | B_NEG3 | B_OFF1, B_OFF9 | B_NEG3 | B_POS1,
+    B_OFF9 | B_OFF3 | B_NEG1, B_OFF9 | B_OFF3 | B_OFF1,
+    B_OFF9 | B_OFF3 | B_POS1, B_OFF9 | B_POS3 | B_NEG1,
+    B_OFF9 | B_POS3 | B_OFF1, B_OFF9 | B_POS3 | B_POS1,
+    B_POS9 | B_NEG3 | B_NEG1, B_POS9 | B_NEG3 | B_OFF1,
+    B_POS9 | B_NEG3 | B_POS1, B_POS9 | B_OFF3 | B_NEG1,
+    B_POS9 | B_OFF3 | B_OFF1, B_POS9 | B_OFF3 | B_POS1,
+    B_POS9 | B_POS3 | B_NEG1, B_POS9 | B_POS3 | B_OFF1,
+    B_POS9 | B_POS3 | B_POS1};
+constexpr uint32_t svm_phase_levels_c[] = {
+    C_NEG9 | C_NEG3 | C_NEG1, C_NEG9 | C_NEG3 | C_OFF1,
+    C_NEG9 | C_NEG3 | C_POS1, C_NEG9 | C_OFF3 | C_NEG1,
+    C_NEG9 | C_OFF3 | C_OFF1, C_NEG9 | C_OFF3 | C_POS1,
+    C_NEG9 | C_POS3 | C_NEG1, C_NEG9 | C_POS3 | C_OFF1,
+    C_NEG9 | C_POS3 | C_POS1, C_OFF9 | C_NEG3 | C_NEG1,
+    C_OFF9 | C_NEG3 | C_OFF1, C_OFF9 | C_NEG3 | C_POS1,
+    C_OFF9 | C_OFF3 | C_NEG1, C_OFF9 | C_OFF3 | C_OFF1,
+    C_OFF9 | C_OFF3 | C_POS1, C_OFF9 | C_POS3 | C_NEG1,
+    C_OFF9 | C_POS3 | C_OFF1, C_OFF9 | C_POS3 | C_POS1,
+    C_POS9 | C_NEG3 | C_NEG1, C_POS9 | C_NEG3 | C_OFF1,
+    C_POS9 | C_NEG3 | C_POS1, C_POS9 | C_OFF3 | C_NEG1,
+    C_POS9 | C_OFF3 | C_OFF1, C_POS9 | C_OFF3 | C_POS1,
+    C_POS9 | C_POS3 | C_NEG1, C_POS9 | C_POS3 | C_OFF1,
+    C_POS9 | C_POS3 | C_POS1};

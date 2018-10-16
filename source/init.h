@@ -16,3 +16,4 @@ extern float Id_ref, Iq_ref;
 
 extern float V_an, V_bn, V_cn;
 extern float I_Aa, I_Bb, I_Cc;
+extern float Id_error, Iq_error;
