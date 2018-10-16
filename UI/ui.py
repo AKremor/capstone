@@ -16,13 +16,6 @@ import sys
 from struct import *
 
 
-def dq0_transform(v_a, v_b, v_c):
-    # TODO(akremor): Check this transform
-    d = (np.sqrt(2/3)*v_a-(1/(np.sqrt(6)))*v_b-(1/(np.sqrt(6)))*v_c)
-    q = ((1/(np.sqrt(2)))*v_b-(1/(np.sqrt(2)))*v_c)
-    return d, q
-
-
 class LiveFFTWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super(LiveFFTWidget, self).__init__(parent)
@@ -86,11 +79,12 @@ class LivePlotWidget(QtGui.QWidget):
         self.layout = QVBoxLayout(self)
         self.plotter = pg.PlotWidget()
         self.plotter.showGrid(x=True, y=True)
+        self.plotter.addLegend()
         self.plotter.setLabel('left', *self.y_axis)
         self.plotter.setLabel('bottom', *self.x_axis)
         colours = [(255, 255, 255), (255, 0, 0), (0, 255, 0)]
         for i in range(self.n_plots):
-            self.curves[i] = self.plotter.plot(self.x, self.y[i], pen=colours[i])
+            self.curves[i] = self.plotter.plot(self.x, self.y[i], pen=colours[i], name=legends[i])
         self.layout.addWidget(self.plotter)
 
     def updateplot(self):
@@ -137,58 +131,58 @@ class SerialReader(QObject):
 
     @pyqtSlot()
     def run(self):
-        while False:
-            self.serial_port.read_until(b'\x41\x61')
-
-            # We have now achieved sync
-            # Make next char include size
-            length = self.serial_port.read(1)
-
-            length = int.from_bytes(length, byteorder='little')
-
-            data = self.serial_port.read(length)
-            data = unpack('ffffffffff', data)
-
-            print("Read {} bytes".format(len(data)))
-            print(data)
-
-            # Unpack the data
-            Id_ref = data[0]
-            Iq_ref = data[1]
-            I_Aa = data[2]
-            I_Bb = data[3]
-            I_Cc = data[4]
-            V_an = data[5]
-            V_bn = data[6]
-            V_cn = data[7]
-            Id_error = data[8]
-            Iq_error = data[9]
-
-            level_9_detect = data[10]
-            level_3_detect = data[11]
-            level_1_detect = data[12]
-
-            self.level_9_detect_signal.emit(level_9_detect)
-            self.level_3_detect_signal.emit(level_3_detect)
-            self.level_1_detect_signal.emit(level_1_detect)
-
-
         while True:
             time.sleep(0.01)
+            if self.serial_port is not None:
+                self.serial_port.read_until(b'\x41\x61')
 
-            I_Aa = 1 * math.sin(time.time() * 2 * 1 * math.pi)
-            I_Bb = 1 * math.sin(time.time() * 2 * 1 * math.pi - 2 * math.pi / 3)
-            I_Cc = 1 * math.sin(time.time() * 2 * 1 * math.pi + 2 * math.pi / 3)
+                # We have now achieved sync
+                # Make next char include size
+                length = int.from_bytes(self.serial_port.read(1), byteorder='little')
+                data = unpack('ffffffffff', self.serial_port.read(length))
 
-            V_an = 1 * math.cos(time.time() * 2 * 1 * math.pi)
-            V_bn = 1 * math.cos(time.time() * 2 * 1 * math.pi - 2 * math.pi / 3)
-            V_cn = 1 * math.cos(time.time() * 2 * 1 * math.pi + 2 * math.pi / 3)
+                # print("Read {} bytes".format(len(data)))
+                # print(data)
+
+                Id_ref = data[0]
+                Iq_ref = data[1]
+                I_Aa = data[2]
+                I_Bb = data[3]
+                I_Cc = data[4]
+                V_an = data[5]
+                V_bn = data[6]
+                V_cn = data[7]
+                Id_error = data[8]
+                Iq_error = data[9]
+
+                level_9_detect = data[10]
+                level_3_detect = data[11]
+                level_1_detect = data[12]
+
+            else:
+                # If the serial port crashes or does not exist use fake data
+                I_magnitude = 1
+                V_magnitude = 10
+
+                I_Aa = I_magnitude * math.sin(time.time() * 2 * 1 * math.pi)
+                I_Bb = I_magnitude * math.sin(time.time() * 2 * 1 * math.pi - 2 * math.pi / 3)
+                I_Cc = I_magnitude * math.sin(time.time() * 2 * 1 * math.pi + 2 * math.pi / 3)
+
+                V_an = V_magnitude * math.cos(time.time() * 2 * 1 * math.pi)
+                V_bn = V_magnitude * math.cos(time.time() * 2 * 1 * math.pi - 2 * math.pi / 3)
+                V_cn = V_magnitude * math.cos(time.time() * 2 * 1 * math.pi + 2 * math.pi / 3)
+
+                I_d = I_magnitude
+                I_q = 0
+                V_d = V_magnitude * 0
+                V_q = 0
+
+                level_9_detect = 1
+                level_3_detect = 0
+                level_1_detect = 1
 
             self.sensed_voltage_sample_buffer.append(V_an)
             self.sensed_current_sample_buffer.append(I_Aa)
-
-            I_d, I_q = dq0_transform(I_Aa, I_Bb, I_Cc)
-            V_d, V_q = dq0_transform(V_an, V_bn, V_cn)
 
             voltage_fft_data = np.abs(np.fft.rfft(self.sensed_voltage_sample_buffer))
             current_fft_data = np.abs(np.fft.rfft(self.sensed_current_sample_buffer))
@@ -197,15 +191,16 @@ class SerialReader(QObject):
             self.sensed_current_abc_signal.emit(I_Aa, I_Bb, I_Cc)
             self.sensed_voltage_abc_signal.emit(V_an, V_bn, V_cn)
 
-            self.sensed_current_dq_signal.emit(I_d, I_q, 0)
-            self.sensed_voltage_dq_signal.emit(V_d, V_q, 0)
+            # TODO Seem faulty?
+            #self.sensed_current_dq_signal.emit(I_d, I_q, 0)
+            #self.sensed_voltage_dq_signal.emit(V_d, V_q, 0)
 
             self.sensed_voltage_fft_signal.emit(freq_vect, voltage_fft_data)
             self.sensed_current_fft_signal.emit(freq_vect, current_fft_data)
 
-            self.level_9_detect_signal.emit(1)
-            self.level_3_detect_signal.emit(0)
-            self.level_1_detect_signal.emit(1)
+            self.level_9_detect_signal.emit(level_9_detect)
+            self.level_3_detect_signal.emit(level_3_detect)
+            self.level_1_detect_signal.emit(level_1_detect)
 
             app.processEvents()
 

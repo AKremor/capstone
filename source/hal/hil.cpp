@@ -23,10 +23,10 @@ void init_hil() {
 }
 
 void send_state_to_simulator() {
-    int8_t buffer[43];
+    int8_t buffer[46];
     buffer[0] = 'A';
     buffer[1] = 'a';
-    buffer[2] = 40;  // Length to come after this byte
+    buffer[2] = 43;  // Length to come after this byte
     memcpy(buffer + 3, &Id_ref, 4);
     memcpy(buffer + 7, &Iq_ref, 4);
     memcpy(buffer + 11, &I_Aa, 4);
@@ -37,9 +37,9 @@ void send_state_to_simulator() {
     memcpy(buffer + 31, &V_cn, 4);
     memcpy(buffer + 35, &Id_error, 4);
     memcpy(buffer + 39, &Iq_error, 4);
-    memcpy(buffer + 40, &level_9_detect, 1);
-    memcpy(buffer + 40, &level_3_detect, 1);
-    memcpy(buffer + 40, &level_1_detect, 1);
+    memcpy(buffer + 43, &level_9_detect, 1);
+    memcpy(buffer + 44, &level_3_detect, 1);
+    memcpy(buffer + 45, &level_1_detect, 1);
 
     for (uint8_t i = 0; i < sizeof(buffer); i++) {
         MAP_UARTCharPut(UART3_BASE, buffer[i]);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 extern "C" {
 void TIMER0A_IRQHandler(void);
 void TIMER1A_IRQHandler(void);

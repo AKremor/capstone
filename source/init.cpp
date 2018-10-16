@@ -39,17 +39,22 @@ void init_hbridge_io() {
     while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOM)))
         ;
 
-    MAP_GPIOPinTypeGPIOOutput(
-        GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
-                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+    MAP_GPIOPinTypeGPIOOutput(GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 |
+                                                   GPIO_PIN_2 | GPIO_PIN_3 |
+                                                   GPIO_PIN_4 | GPIO_PIN_5);
 
-    MAP_GPIOPinTypeGPIOOutput(
-        GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
-                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+    MAP_GPIOPinTypeGPIOOutput(GPIO_PORTK_BASE, GPIO_PIN_0 | GPIO_PIN_1 |
+                                                   GPIO_PIN_2 | GPIO_PIN_3 |
+                                                   GPIO_PIN_4 | GPIO_PIN_5);
 
-    MAP_GPIOPinTypeGPIOOutput(
-        GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
-                             GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+    MAP_GPIOPinTypeGPIOOutput(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1 |
+                                                   GPIO_PIN_2 | GPIO_PIN_3 |
+                                                   GPIO_PIN_4 | GPIO_PIN_5);
+
+    // Sense pins
+    MAP_GPIOPinTypeGPIOInput(GPIO_PORTA_BASE, GPIO_PIN_6);
+    MAP_GPIOPinTypeGPIOInput(GPIO_PORTL_BASE, GPIO_PIN_6);
+    MAP_GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_6);
 
     MAP_GPIOPinTypeGPIOOutput(
         GPIO_PORTM_BASE, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
@@ -214,13 +219,19 @@ float32_t prev_adc[3] = {0, 0, 0};
 float32_t current_history[3][3] = {};
 uint32_t current_history_index = 0;
 
-// THese are the truth source
-float Id_ref = 1;
+float Id_ref = magnitude;
 float Iq_ref = 0.0;
 
 float Id_error, Iq_error;
 
+uint8_t level_9_detect, level_3_detect, level_1_detect;
+
 void svm_control_loop() {
+    // Check if anyone dis/connected anything
+    level_9_detect = GPIOPinRead(GPIO_PORTA_BASE, GPIO_PIN_6) ? 1 : 0;
+    level_3_detect = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_6) ? 1 : 0;
+    level_1_detect = GPIOPinRead(GPIO_PORTL_BASE, GPIO_PIN_6) ? 1 : 0;
+
     system_time_us += svm_period_us;
 
     float32_t sinVal, cosVal;
@@ -294,7 +305,7 @@ void svm_control_loop() {
     send_state_to_simulator();
     float channel_data[8];
 
-    adcReadChannels(channel_data);
+    // adcReadChannels(channel_data);
 }
 
 void ADC0SS2_IRQHandler(void) {
