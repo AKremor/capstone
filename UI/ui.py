@@ -20,6 +20,8 @@ import math
 from pyqtgraph.Qt import QtGui, QtCore
 import serial
 
+import sys
+from struct import *
 
 class LiveFFTWidget(QtGui.QWidget):
     def __init__(self):
@@ -29,8 +31,7 @@ class LiveFFTWidget(QtGui.QWidget):
 
         self.fft_data = np.zeros(self.buffer_size, dtype=np.float)
         self.freq_vect = np.zeros(self.buffer_size, dtype=np.float)
-        
-        # customize the UI
+
         self.initUI()
 
         # QTimer
@@ -48,15 +49,12 @@ class LiveFFTWidget(QtGui.QWidget):
         self.lay.addWidget(self.plotter)
 
     def updateplot(self):
-
-        if self.fft_data is None:
-            return
         self.curve.setData(self.freq_vect, self.fft_data)
-        self.fft_data = None
 
-    def give_data(self, freq_vect, fft_data):
-        self.fft_data = fft_data
+    @pyqtSlot(object, object)
+    def take_sample(self, freq_vect, fft_data):
         self.freq_vect = freq_vect
+        self.fft_data = fft_data
 
 class LiveSVMWidget(QtGui.QWidget):
     def __init__(self):
@@ -84,12 +82,6 @@ class LiveSVMWidget(QtGui.QWidget):
         self.plotter.setYRange(-10, 10, padding=2)
         self.lay.addWidget(self.plotter)
 
-        # Create the SVM plane
-        numPoints = 10
-        #x = np.random.normal(size=numPoints)
-        #y = np.random.normal(size=numPoints)
-        #self.curve.setData(x, y)
-
     def set_ref_vector(self, ref_x, ref_y):
         self.ref_vector_tip_x = ref_x
         self.ref_vector_tip_y = ref_y
@@ -97,14 +89,23 @@ class LiveSVMWidget(QtGui.QWidget):
     def updateplot(self):
         self.ref_vector_curve.setData([0, self.ref_vector_tip_x], [0, self.ref_vector_tip_y])
 
+
 class LivePlotWidget(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, n_plots, legends, x_axis, y_axis):
+
         QtGui.QWidget.__init__(self)
-        self.buffer_size = 1000
+        self.buffer_size = 100
+        self.curves = [None] * n_plots
+        self.legends = legends
+        self.x_axis = x_axis
+        self.y_axis = y_axis
+        self.n_plots = n_plots
         self.timewindow = 10
-        self.x = np.linspace(-self.timewindow, 0.0, self.buffer_size)
-        self.y = np.zeros(self.buffer_size, dtype=np.float)
-        self.databuffer = collections.deque([0.0]*self.buffer_size, self.buffer_size)
+        self.prev_time = time.time() * 1000
+        #self.x = collections.deque([0.0]*self.buffer_size, self.buffer_size)
+        self.x = np.linspace(-10,0,self.buffer_size)
+        self.y = [collections.deque([0.0]*self.buffer_size, self.buffer_size)] * n_plots
+        self.databuffer = [collections.deque([0.0]*self.buffer_size, self.buffer_size)] * n_plots
         self.givedata_buffer = None
         
         # customize the UI
@@ -113,93 +114,29 @@ class LivePlotWidget(QtGui.QWidget):
         # QTimer
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateplot)
-        self.timer.start(1)
+        self.timer.start(100)
 
     def initUI(self):
         self.lay = QVBoxLayout(self)
         self.plotter = pg.PlotWidget()
         self.plotter.showGrid(x=True, y=True)
-        self.plotter.setLabel('left', 'Amplitude', 'A')
-        self.plotter.setLabel('bottom', 'Time', 's')
-        self.curve = self.plotter.plot(self.x, self.y, pen=(255,0,0))
+        self.plotter.setLabel('left', *self.y_axis)
+        self.plotter.setLabel('bottom', *self.x_axis)
+        colours = [(255, 255, 255), (255, 0, 0), (0, 255, 0)]
+        for i in range(self.n_plots):
+            self.curves[i] = self.plotter.plot(self.x, self.y[i], pen=colours[i])
         self.lay.addWidget(self.plotter)
 
     def updateplot(self):
 
         if self.givedata_buffer is None:
             return
-        # If we haven't received data to givedata_buffer
-        self.databuffer.append( self.givedata_buffer )
 
-        self.y[:] = self.databuffer
-        self.curve.setData(self.x, self.y)
-        #self.app.processEvents()
+        for i in range(self.n_plots):
+            self.databuffer[i].append(self.givedata_buffer[i])
+            self.curves[i].setData(self.x, self.databuffer[i])
 
-    def data_wrapper(self, func, *args, **kwargs):
-            def wrapped(*args, **kwargs):
-                while True:
-                    res = func(*args, **kwargs)
-                    time.sleep(float(self._interval) / 1000)
-                    self.givedata(res)
-
-            return wrapped
-
-    def give_data(self, data):
-        self.givedata_buffer = data
-        # Takes in an x,y tuple
-
-
-class Live3PhasePlotWidget(QtGui.QWidget):
-    def __init__(self):
-        QtGui.QWidget.__init__(self)
-
-        self.buffer_size = 1000
-        self.timewindow = 10
-        self.x = np.linspace(-self.timewindow, 0.0, self.buffer_size)
-        self.y_a = np.zeros(self.buffer_size, dtype=np.float)
-        self.y_b = np.zeros(self.buffer_size, dtype=np.float)
-        self.y_c = np.zeros(self.buffer_size, dtype=np.float)
-        self.databuffer_a = collections.deque([0.0] * self.buffer_size, self.buffer_size)
-        self.databuffer_b = collections.deque([0.0] * self.buffer_size, self.buffer_size)
-        self.databuffer_c = collections.deque([0.0] * self.buffer_size, self.buffer_size)
-        self.givedata_buffer = None
-
-        # customize the UI
-        self.initUI()
-
-        # QTimer
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.updateplot)
-        self.timer.start(1)
-
-    def initUI(self):
-        self.lay = QVBoxLayout(self)
-        self.plotter = pg.PlotWidget()
-        self.plotter.showGrid(x=True, y=True)
-        self.plotter.setLabel('left', 'Amplitude', 'A')
-        self.plotter.setLabel('bottom', 'Time', 's')
-        self.curve_a = self.plotter.plot(self.x, self.y_a, pen=(255, 0, 0))
-        self.curve_b = self.plotter.plot(self.x, self.y_b, pen=(128, 255, 0))
-        self.curve_c = self.plotter.plot(self.x, self.y_c, pen=(128, 0, 255))
-        self.lay.addWidget(self.plotter)
-
-    def updateplot(self):
-        if self.givedata_buffer is None:
-            return
-
-        # If we haven't received data to givedata_buffer
-        self.databuffer_a.append(self.givedata_buffer[0])
-        self.databuffer_b.append(self.givedata_buffer[1])
-        self.databuffer_c.append(self.givedata_buffer[2])
-
-        self.y_a[:] = self.databuffer_a
-        self.y_b[:] = self.databuffer_b
-        self.y_c[:] = self.databuffer_c
-
-        self.curve_a.setData(self.x, self.y_a)
-        self.curve_b.setData(self.x, self.y_b)
-        self.curve_c.setData(self.x, self.y_c)
-
+    # TODO How to make this responsive to number of things?
     @QtCore.pyqtSlot(float, float, float)
     def take_sample(self, a, b, c):
         self.givedata_buffer = [a, b, c]
@@ -208,8 +145,8 @@ class Live3PhasePlotWidget(QtGui.QWidget):
 class Inverter(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
-        self.reference_current_plot = Live3PhasePlotWidget()
-        self.sensed_current_plot = Live3PhasePlotWidget()
+        self.sensed_current_plot = LivePlotWidget(3, ['a', 'b', 'c'], ('Time', 's'), ('Current', 'A'))
+        self.sensed_voltage_plot = LivePlotWidget(3, ['a', 'b', 'c'], ('Time', 's'), ('Voltage', 'V'))
 
         self.initUI()
 
@@ -217,37 +154,33 @@ class Inverter(QtGui.QWidget):
         grid = QGridLayout()
         grid.setSpacing(10)
 
-        self.fixedFreqSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
-        self.fixedFreqSlider.setMinimum(0.0001)
-        self.fixedFreqSlider.setMaximum(10)
-        self.fixedFreqSlider.setSingleStep(0.001)
-        self.freq_entry = QLineEdit()
-        self.freq_entry.setValidator(QDoubleValidator(0.001, 1000, 2))
+        self.sensed_V_FFT_plot = LiveFFTWidget()
+        self.sensed_I_FFT_plot = LiveFFTWidget()
 
-        self.magSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
-        self.magSlider.setMinimum(0.001)
-        self.magSlider.setMaximum(10)
-        self.magSlider.setSingleStep(0.001)
+        sensed_voltage_label = QLabel()
+        sensed_voltage_label.setText("Sensed Voltage")
+        sensed_voltage_label.setAlignment(QtCore.Qt.AlignCenter)
+        sensed_current_label = QLabel()
+        sensed_current_label.setText("Sensed Current")
+        sensed_current_label.setAlignment(QtCore.Qt.AlignCenter)
 
-        grid.addWidget(self.reference_current_plot, 1, 1, 1, 2)
-        grid.addWidget(self.sensed_current_plot, 1, 3, 1, 2)
+        sensed_voltage_FFT_label = QLabel()
+        sensed_voltage_FFT_label.setText("Sensed Voltage FFT")
+        sensed_voltage_FFT_label.setAlignment(QtCore.Qt.AlignCenter)
+        sensed_current_FFT_label = QLabel()
+        sensed_current_FFT_label.setText("Sensed Current FFT")
+        sensed_current_FFT_label.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.current_fft = LiveFFTWidget()
-        grid.addWidget(self.current_fft, 2, 1, 1, 2)
+        grid.addWidget(sensed_voltage_label, 1, 1, 1, 2)
+        grid.addWidget(self.sensed_voltage_plot, 2, 1, 1, 2)
+        grid.addWidget(sensed_current_label, 1, 3, 1, 2)
+        grid.addWidget(self.sensed_current_plot, 2, 3, 1, 2)
 
-        #freq_label = QLabel("Frequency")
-        #mag_label = QLabel("Magnitude")
-        #freq_label.setAlignment(QtCore.Qt.AlignCenter)
-        #mag_label.setAlignment(QtCore.Qt.AlignCenter)
+        grid.addWidget(self.sensed_V_FFT_plot, 4, 1, 1, 2)
+        grid.addWidget(sensed_voltage_FFT_label, 3, 1, 1, 2)
+        grid.addWidget(self.sensed_I_FFT_plot, 4, 3, 1, 2)
+        grid.addWidget(sensed_current_FFT_label, 3, 3, 1, 2)
 
-        #grid.addWidget(freq_label, 3,1)
-        #grid.addWidget(mag_label, 3,2)
-        #grid.addWidget(self.fixedFreqSlider, 4, 1)
-        #grid.addWidget(self.freq_entry, 5, 1)
-        #grid.addWidget(self.magSlider,4,2)
-        
-        self.svm_plane = LiveSVMWidget()
-        grid.addWidget(self.svm_plane, 6,1, 1, 2)
         self.setLayout(grid) 
         
         self.resize(900, 600)
@@ -257,106 +190,111 @@ class Inverter(QtGui.QWidget):
         self.show()
 
 class SerialReader(QObject):
-    reference_I_abc = pyqtSignal(float, float, float, name='reference_I_abc')
-    sensed_I_abc = pyqtSignal(float, float, float, name='sensed_I_abc')
 
-    reference_V_abc = pyqtSignal(float, float, float, name='reference_V_abc')
+    sensed_I_abc = pyqtSignal(float, float, float, name='sensed_I_abc')
     sensed_V_abc = pyqtSignal(float, float, float, name='sensed_V_abc')
 
-    def __init__(self, serial_port):
+    sensed_V_FFT = pyqtSignal(object, object, name="sensed_V_FFT")
+    sensed_I_FFT = pyqtSignal(object, object, name="sensed_I_FFT")
+
+    new_fft_a_sample = pyqtSignal(float)
+
+    def __init__(self, serial_port, buffer_size = 1000):
         super().__init__()
+        self.buffer_size = buffer_size
+        self.sensed_V_sample_buffer = [collections.deque([0.0] * self.buffer_size, self.buffer_size)]*3
+        self.sensed_I_sample_buffer = [collections.deque([0.0] * self.buffer_size, self.buffer_size)]*3
         self.serial_port = serial_port
 
     @pyqtSlot()
     def run(self):
+        while False:
+            self.serial_port.read_until(b'\x41\x61')
+
+            # We have now achieved sync
+            # Make next char include size
+            length = self.serial_port.read(1)
+
+            length = int.from_bytes(length, byteorder='little')
+
+            data = self.serial_port.read(length)
+            data = unpack('ffffffffff', data)
+
+            print("Read {} bytes".format(len(data)))
+            print(data)
+
         while True:
-            time.sleep(0.001)
-            ref_a =  math.sin(time.time() * 2 * 1 * math.pi)
-            ref_b =  math.sin(time.time() * 2 * 1 * math.pi - 2 * math.pi / 3)
-            ref_c =  math.sin(time.time() * 2 * 1 * math.pi + 2 * math.pi / 3)
+            a = 1 * math.sin(time.time() * 2 * 0.001 * math.pi)
+            b = 1 * math.sin(time.time() * 2 * 0.001 * math.pi - 2 * math.pi / 3)
+            c = 1 * math.sin(time.time() * 2 * 0.001 * math.pi + 2 * math.pi / 3)
 
-            self.sensed_I_abc.emit(random.randint(1,5), random.randint(1,5), random.randint(1,5)) # TODO
-            self.reference_I_abc.emit(ref_a, ref_b, ref_c)  # TODO
+            data = [a] * 10
+            # Unpack the data
+            Id_ref = data[0]
+            Iq_ref = data[1]
+            I_Aa = data[2]
+            I_Bb = data[3]
+            I_Cc = data[4]
+            V_an = data[5]
+            V_bn = data[6]
+            V_cn = data[7]
+            Id_error = data[8]
+            Iq_error = data[9]
 
-            self.sensed_V_abc.emit(ref_a, ref_b, ref_c)  # TODO
-            self.reference_V_abc.emit(ref_a, ref_b, ref_c)  # TODO
+            time.sleep(0.01)
+            I_Aa = a
+            I_Bb = b
+            I_Cc = c
+
+            V_an = a
+            V_bn = b
+            V_cn = c
+
+            self.sensed_I_sample_buffer[0].append(I_Aa)
+            self.sensed_I_sample_buffer[1].append(I_Bb)
+            self.sensed_I_sample_buffer[2].append(I_Cc)
+            self.sensed_V_sample_buffer[0].append(V_an)
+            self.sensed_V_sample_buffer[1].append(V_bn)
+            self.sensed_V_sample_buffer[2].append(V_cn)
+
+            fft_data = np.abs(np.fft.rfft(self.sensed_I_sample_buffer[0]))
+            freq_vect = np.fft.rfftfreq(1000, 1000)
+
+            self.sensed_I_abc.emit(I_Aa, I_Bb, I_Cc)
+            self.sensed_V_abc.emit(V_an, V_bn, V_cn)
+            self.sensed_V_FFT.emit(freq_vect, fft_data)
+            self.sensed_I_FFT.emit(freq_vect, fft_data) # TODO
+            #self.reference_V_abc.emit(ref_a, ref_b, ref_c)  # TODO
 
             app.processEvents()
 
-class FFT(QObject):
-    new_fft_sample = pyqtSignal(float)
-
-    def __init__(self, buffer_size):
-        super().__init__()
-        self.buffer_size = buffer_size
-
-    @pyqtSlot()
-    def run(self):
-        while True:
-            time.sleep(0.001)
-            ref_a =  math.sin(time.time() * 2 * 1 * math.pi)
-            ref_b =  math.sin(time.time() * 2 * 1 * math.pi - 2 * math.pi / 3)
-            ref_c =  math.sin(time.time() * 2 * 1 * math.pi + 2 * math.pi / 3)
-
-            self.sensed_I_abc.emit(random.randint(1,5), random.randint(1,5), random.randint(1,5)) # TODO
-            self.reference_I_abc.emit(ref_a, ref_b, ref_c)  # TODO
-
-            self.sensed_V_abc.emit(ref_a, ref_b, ref_c)  # TODO
-            self.reference_V_abc.emit(ref_a, ref_b, ref_c)  # TODO
-
-            app.processEvents()
-
-def gen_data(parents, magnitude, frequency, max_noise, svm_plane):
-    databuffer = collections.deque([0.0] * 1000, 1000)
-    while True:
-        time.sleep(float(10) / 1000)
-        noise = random.normalvariate(0., max_noise)
-        freq = frequency.value()
-
-        new = magnitude.value()*math.sin(time.time()*2*freq *math.pi) + noise
-        newb = magnitude.value()*math.sin(time.time()*2*freq *math.pi - 2 * math.pi/3) + noise
-        newc = magnitude.value()*math.sin(time.time()*2*freq *math.pi + 2 * math.pi/3) + noise
-
-
-        databuffer.append(new)
-        fft_data = np.abs(np.fft.rfft(databuffer))
-        freq_vect = np.fft.rfftfreq(1000, 1000)
-        parents[1].give_data(freq_vect, fft_data)
-
-        # calculate the gh value
-        newa = new
-        Vdc = 1
-
-        g = 1 / (3 * Vdc) * (2 * newa - newb - newc)
-        h = 1 / (3 * Vdc) * (-1 * newa + 2 * newb - newc)
-        svm_plane.set_ref_vector(g, h)
 
 if __name__ == '__main__':
     
     app = QtGui.QApplication([])
     plt = Inverter()
 
-    serial_port = None#serial.Serial('COM7', 921600)
+    serial_port = None #serial.Serial('COM9', 921600)
+
+    fft_a_graph_update = pyqtSignal(object, object)
 
     serial_read_worker = SerialReader(serial_port)
+    #fft_a_worker = FFT()
+
+    #fft_a_thread = QThread()
+    #fft_a_worker.moveToThread(fft_a_thread)
     serial_read_thread = QThread()
     serial_read_worker.moveToThread(serial_read_thread)
+
     serial_read_thread.started.connect(serial_read_worker.run)
+
     serial_read_worker.sensed_I_abc.connect(plt.sensed_current_plot.take_sample)
-    serial_read_worker.reference_I_abc.connect(plt.reference_current_plot.take_sample)
+    serial_read_worker.sensed_V_abc.connect(plt.sensed_voltage_plot.take_sample)
+    serial_read_worker.sensed_V_FFT.connect(plt.sensed_V_FFT_plot.take_sample)
+    serial_read_worker.sensed_I_FFT.connect(plt.sensed_I_FFT_plot.take_sample)
+
     serial_read_thread.start()
 
-    # Define the thread
-    th = threading.Thread(target=gen_data,
-                   kwargs={'frequency': plt.fixedFreqSlider,
-                           'magnitude': plt.magSlider,
-                           'max_noise': 0.1,
-                           'parents': [plt.reference_current_plot, plt.current_fft],
-                           'svm_plane': plt.svm_plane})
-    th.daemon = True
-
-    # Finally when the set-up is ready, start everything
-    th.start() # Start thread
     plt.run()  # Start plotting
 
     sys.exit(app.exec_())
