@@ -228,9 +228,10 @@ uint8_t level_9_detect, level_3_detect, level_1_detect;
 
 void svm_control_loop() {
     // Check if anyone dis/connected anything
-    level_9_detect = GPIOPinRead(GPIO_PORTA_BASE, GPIO_PIN_6) ? 1 : 0;
-    level_3_detect = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_6) ? 1 : 0;
-    level_1_detect = GPIOPinRead(GPIO_PORTL_BASE, GPIO_PIN_6) ? 1 : 0;
+    // These are active low (low signals the cell is connected)
+    level_9_detect = GPIOPinRead(GPIO_PORTA_BASE, GPIO_PIN_6) ? 0 : 1;
+    level_3_detect = GPIOPinRead(GPIO_PORTK_BASE, GPIO_PIN_6) ? 0 : 1;
+    level_1_detect = GPIOPinRead(GPIO_PORTL_BASE, GPIO_PIN_6) ? 0 : 1;
 
     system_time_us += svm_period_us;
 
