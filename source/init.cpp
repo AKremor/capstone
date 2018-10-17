@@ -215,7 +215,7 @@ void svm_control_loop() {
             3,
     };
 
-    volatile float32_t Id = 1;
+    volatile float32_t Id = magnitude;
     volatile float32_t Iq = 0;
 
     abc_quantity load_line_current = quantity_current;
