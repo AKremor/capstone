@@ -15,9 +15,9 @@ constexpr uint32_t system_clock_mhz = 120;
 // 12000, 1000, 1000 for 10kHz
 // 6000, 672, 672 for 20kHz
 // 3000, 1000, 1000 for 40kHz
-static const uint32_t chopper_hz = 10000;
-static const uint32_t chopper_rising_dead_band_ns = 3600;
-static const uint32_t chopper_falling_dead_band_ns = 3600;
+static uint32_t chopper_hz = 10000;
+static const uint32_t chopper_rising_dead_band_ns = 0;
+static const uint32_t chopper_falling_dead_band_ns = 0;
 
 // Internal reference generation
 static constexpr uint16_t svm_period_us = 200;

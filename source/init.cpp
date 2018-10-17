@@ -40,6 +40,8 @@ float Id_error, Iq_error;
 
 uint8_t level_9_detect, level_3_detect, level_1_detect;
 
+SystemStatus system_state = START;
+
 void init_hbridge_io() {
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
     while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOL)))
@@ -150,7 +152,7 @@ void mainThread(void* arg0) {
     start_chopper();
     init_hil();
     init_hbridge_io();
-    init_adc();
+    //init_adc();
     init_timers();
 
     while (1) {
@@ -242,25 +244,14 @@ void svm_control_loop() {
                     &sinVal, &cosVal);
 
     // Bias current readings appropriately
-    abc_quantity quantity_current = {
-        (current_history[1][1] + current_history[2][1] +
-         current_history[3][1]) /
-            3,
-        (current_history[1][2] + current_history[2][2] +
-         current_history[3][2]) /
-            3,
-        (current_history[1][3] + current_history[2][3] +
-         current_history[3][3]) /
-            3,
-    };
+    // TODO Filter currents
 
     volatile float32_t Id = Id_ref;
     volatile float32_t Iq = Iq_ref;
 
-    abc_quantity load_line_current = quantity_current;
     volatile float32_t Ialphasense = 0, Ibetasense = 0;
-    arm_clarke_f32(load_line_current.a, load_line_current.b,
-                   (float32_t*)&Ialphasense, (float32_t*)&Ibetasense);
+    arm_clarke_f32(I_Aa, I_Bb, (float32_t*)&Ialphasense,
+                   (float32_t*)&Ibetasense);
     volatile float32_t Idsense = 0, Iqsense = 0;
     arm_park_f32(Ialphasense, Ibetasense, (float32_t*)&Idsense,
                  (float32_t*)&Iqsense, sinVal, cosVal);
@@ -301,13 +292,17 @@ void svm_control_loop() {
                      (duty_cycles[0] + duty_cycles[1]) * pwm_period_us);
     MAP_TimerLoadSet(TIMER3_BASE, TIMER_A, svm_period_us - 25);
 
-    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
-    MAP_TimerEnable(TIMER1_BASE, TIMER_A);
-    MAP_TimerEnable(TIMER2_BASE, TIMER_A);
-
+    if (system_state == START || system_state == STEP) {
+        if (system_state == STEP) {
+            system_state == PAUSE;
+        }
+        MAP_TimerEnable(TIMER0_BASE, TIMER_A);
+        MAP_TimerEnable(TIMER1_BASE, TIMER_A);
+        MAP_TimerEnable(TIMER2_BASE, TIMER_A);
+    }
     send_state_to_simulator();
 
-    adcReadChannels(adc_raw_voltages);
+    //adcReadChannels(adc_raw_voltages);
 
     // Now convert and store them into globals
     I_Aa = 2 * (adc_raw_voltages[2] - 1.65);
@@ -317,6 +312,8 @@ void svm_control_loop() {
     V_an = 3 * adc_raw_voltages[5];
     V_bn = 3 * adc_raw_voltages[4];
     V_cn = 3 * adc_raw_voltages[3];
+
+    receive_uart();
 }
 
 void ADC0SS2_IRQHandler(void) {

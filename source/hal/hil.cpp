@@ -1,3 +1,4 @@
+#include <source/chopper/chopper.h>
 #include <source/hal/hil.h>
 #include <source/init.h>
 #include <source/system_config.h>
@@ -48,6 +49,10 @@ void send_state_to_simulator() {
 
 constexpr int32_t command_code_set_magnitude = 0x01;
 constexpr int32_t command_code_set_frequency = 0x02;
+constexpr int32_t command_code_pause = 0x03;
+constexpr int32_t command_code_start = 0x04;
+constexpr int32_t command_code_step = 0x05;
+constexpr int32_t command_code_chopper_hz = 0x06;
 
 void receive_uart() {
     // Sync char 1
@@ -60,9 +65,9 @@ void receive_uart() {
     }
 
     int32_t length = UARTCharGet(UART3_BASE);
-    int32_t command_code = UARTCharGet(UART3_BASE);
+    volatile int32_t command_code = UARTCharGet(UART3_BASE);
 
-    int32_t buffer[16];
+    int32_t buffer[5];
 
     for (int i = 0; i < length; i++) {
         buffer[i] = UARTCharGet(UART3_BASE);
@@ -70,14 +75,37 @@ void receive_uart() {
 
     switch (command_code) {
         case command_code_set_magnitude: {
-            Id_ref = (float)(buffer[0] << 24 | buffer[1] << 16 |
-                             buffer[2] << 8 | buffer[3] << 0);
+            Id_ref = ((int32_t)(buffer[0] << 24 | buffer[1] << 16 |
+                                buffer[2] << 8 | buffer[3] << 0)) /
+                     100000.0;
             break;
         }
         case command_code_set_frequency: {
             fundamental_frequency_hz =
-                (float)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 |
-                        buffer[3] << 0);
+                ((int32_t)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 |
+                           buffer[3] << 0)) /
+                100000;
+            break;
+        }
+        case command_code_pause: {
+            system_state = PAUSE;
+            break;
+        }
+        case command_code_start: {
+            system_state = START;
+            break;
+        }
+        case command_code_step: {
+            system_state = STEP;
+            break;
+        }
+        case command_code_chopper_hz: {
+            int32_t chopper_hz_temp =
+                ((int32_t)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 |
+                           buffer[3] << 0)) /
+                100;
+            chopper_hz = chopper_hz_temp;
+            update_frequency(chopper_hz);
             break;
         }
     }

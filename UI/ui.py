@@ -113,26 +113,58 @@ class SerialWriter(QObject):
 
     @pyqtSlot(int)
     def send_magnitude(self, magnitude):
-        self.send(command_code_set_magnitude, magnitude)
+        command_code_set_magnitude = 1
+        for i in range(5):
+            self.send(command_code_set_magnitude, magnitude)
 
     @pyqtSlot(int)
     def send_frequency(self, frequency):
-        self.send(command_code_set_frequency, frequency)
+        command_code_set_frequency = 2
+
+        for i in range(5):
+            self.send(command_code_set_frequency, frequency)
+
+    @pyqtSlot()
+    def send_pause(self):
+        command_code_pause = 3
+
+        for i in range(5):
+            self.send(command_code_pause, 0)
+
+    @pyqtSlot()
+    def send_start(self):
+        command_code_start = 4
+
+        for i in range(5):
+            self.send(command_code_start, 0)
+
+    @pyqtSlot()
+    def send_step(self):
+        command_code_step = 5
+
+        for i in range(5):
+            self.send(command_code_step, 0)
+
+    @pyqtSlot(int)
+    def send_chopper_hz(self, chopper_hz):
+        command_code_chopper_hz = 6
+
+        for i in range(5):
+            self.send(command_code_chopper_hz, chopper_hz)
 
     def send(self, command_code, value):
+        print("Sending something to serial port")
         if self.serial_port is None:
             print("Serial port None on writer")
             return
 
-        self.serial_port.write('A')
-        self.serial_port.write('a')
-        self.serial_port.write(len(5))
-        self.serial_port.write(command_code)
+        self.serial_port.write(bytes('A', 'ascii'))
+        self.serial_port.write(bytes('a', 'ascii'))
+        self.serial_port.write(bytearray([5]))
+        self.serial_port.write(bytearray([command_code]))
 
-        byte_list = pack('f', value)
-
-        for byte in byte_list:
-            self.serial_port.write(byte)
+        byte_list = pack('>i', 100000 * value)
+        self.serial_port.write(bytearray(byte_list))
 
         app.processEvents()
 
@@ -247,10 +279,6 @@ class SerialReader(QObject):
 
             app.processEvents()
 
-
-command_code_set_magnitude = 1
-command_code_set_frequency = 2
-
 class InverterApp(QtGui.QMainWindow, design.Ui_MainWindow):
     def __init__(self):
         super(self.__class__, self).__init__()
@@ -305,9 +333,15 @@ class InverterApp(QtGui.QMainWindow, design.Ui_MainWindow):
         self.magnitude_slider.valueChanged.connect(self.serial_write_worker.send_magnitude)
         self.frequency_slider.valueChanged.connect(self.frequency_number.display)
         self.frequency_slider.valueChanged.connect(self.serial_write_worker.send_frequency)
+        self.chopper_hz_slider.valueChanged.connect(self.serial_write_worker.send_chopper_hz)
+        self.chopper_hz_slider.valueChanged.connect(self.chopper_hz_number.display)
 
+        self.start_button.clicked.connect(self.serial_write_worker.send_start)
+        self.pause_button.clicked.connect(self.serial_write_worker.send_pause)
+        self.next_state_button.clicked.connect(self.serial_write_worker.send_step)
 
         self.serial_read_thread.start()
+        self.serial_write_thread.start()
 
     @QtCore.pyqtSlot(bool)
     def update_level_9_detect(self, value):

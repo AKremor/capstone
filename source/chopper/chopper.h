@@ -11,3 +11,4 @@ static const uint32_t chopper_gpio_pin_ac_pos = GPIO_PIN_0;
 static const uint32_t chopper_gpio_pin_ac_neg = GPIO_PIN_1;
 
 void start_chopper();
+void update_frequency(uint32_t frequency);

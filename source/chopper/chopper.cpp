@@ -24,11 +24,15 @@ void start_chopper() {
     /* Configure the PWM0 to count up/down without synchronization. */
     MAP_PWMGenConfigure(chopper_pwm_base, PWM_GEN_0,
                         PWM_GEN_MODE_UP_DOWN | PWM_GEN_MODE_NO_SYNC);
+    update_frequency(chopper_hz);
+}
+
+void update_frequency(uint32_t frequency) {
     // N = (1 / f) * SysClk.  Where N is the function parameter, f is the
     // desired frequency, and SysClk is the system clock frequency. Note that
     // the maximum period you can set is 2^16 - 1.
     MAP_PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0,
-                        1.0 * system_clock_mhz * 1e6 / chopper_hz);
+                        1.0 * system_clock_mhz * 1e6 / frequency);
 
     // Duty cycle set as a period of counts
     MAP_PWMPulseWidthSet(chopper_pwm_base, PWM_OUT_0,

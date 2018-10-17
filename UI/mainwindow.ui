@@ -22,29 +22,9 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QLCDNumber" name="sensed_magnitude"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="sensed_magnitude_label">
-         <property name="text">
-          <string>Sensed Magnitude</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLCDNumber" name="sensed_frequency"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="sensed_frequency_label">
-         <property name="text">
-          <string>Sensed Frequency</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QCheckBox" name="level_9_detect">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>9V level detected</string>
@@ -57,7 +37,7 @@
        <item>
         <widget class="QCheckBox" name="level_3_detect">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>3V level detected</string>
@@ -70,7 +50,7 @@
        <item>
         <widget class="QCheckBox" name="level_1_detect">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="text">
           <string>1V level detected</string>
@@ -107,13 +87,6 @@
         <widget class="QPushButton" name="next_state_button">
          <property name="text">
           <string>Next State</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="stop_button">
-         <property name="text">
-          <string>Stop</string>
          </property>
         </widget>
        </item>
@@ -159,6 +132,29 @@
        </item>
        <item>
         <widget class="QLCDNumber" name="frequency_number"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="chopper_hz_slider_label">
+         <property name="text">
+          <string>Chopper Frequency (kHz)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSlider" name="chopper_hz_slider">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLCDNumber" name="chopper_hz_number"/>
        </item>
       </layout>
      </widget>

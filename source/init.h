@@ -11,6 +11,13 @@ void TIMER4A_IRQHandler(void);
 void ADC0SS2_IRQHandler(void);
 }
 
+enum SystemStatus {
+    START,
+    STOP,
+    PAUSE,
+    STEP,
+};
+
 void svm_control_loop();
 
 // Globals
@@ -21,3 +28,4 @@ extern float I_Aa, I_Bb, I_Cc;
 extern float Id_error, Iq_error;
 extern uint8_t level_9_detect, level_3_detect,
     level_1_detect;  // TODO Add to app layer
+extern SystemStatus system_state;
