@@ -143,8 +143,9 @@ uint8_t adcWriteRegister(uint8_t command_value, uint8_t value) {
 
 void adcReadChannels(float* channel_data) {
     uint32_t data[4];
-    uint8_t n_channels = 3;
-    AdcChannelId channels[] = {MAN_CH_0, MAN_CH_1, MAN_CH_2};
+    uint8_t n_channels = 6;
+    AdcChannelId channels[] = {MAN_CH_0, MAN_CH_1, MAN_CH_2,
+                               MAN_CH_3, MAN_CH_4, MAN_CH_5};
 
     clearSpiFifo();
 

@@ -22,7 +22,23 @@ uint16_t adc_s3_fire = 0;
 float I_Aa, I_Bb, I_Cc;
 float V_an, V_bn, V_cn;
 
-float channel_data[8];
+float adc_raw_voltages[6];
+
+SystemState* state = SystemState::get();
+PhaseVoltageLevel duty_levels[3] = {0, 0, 0};
+float32_t duty_cycles[3] = {0.5, 0.25, 0.25};
+
+float32_t prev_adc[3] = {0, 0, 0};
+
+float32_t current_history[3][3] = {};
+uint32_t current_history_index = 0;
+
+float Id_ref = magnitude;
+float Iq_ref = 0.0;
+
+float Id_error, Iq_error;
+
+uint8_t level_9_detect, level_3_detect, level_1_detect;
 
 void init_hbridge_io() {
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
@@ -135,19 +151,11 @@ void mainThread(void* arg0) {
     init_hil();
     init_hbridge_io();
     init_adc();
-
-    while (0) {
-        adcReadChannels(channel_data);
-    }
     init_timers();
 
     while (1) {
     }
 }
-
-SystemState* state = SystemState::get();
-PhaseVoltageLevel duty_levels[3] = {0, 0, 0};
-float32_t duty_cycles[3] = {0.5, 0.25, 0.25};
 
 void TIMER0A_IRQHandler(void) {
     // PWM 1
@@ -219,18 +227,6 @@ void TIMER3A_IRQHandler(void) {
     svm_control_loop();
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_0, 0);
 }
-
-float32_t prev_adc[3] = {0, 0, 0};
-
-float32_t current_history[3][3] = {};
-uint32_t current_history_index = 0;
-
-float Id_ref = magnitude;
-float Iq_ref = 0.0;
-
-float Id_error, Iq_error;
-
-uint8_t level_9_detect, level_3_detect, level_1_detect;
 
 void svm_control_loop() {
     // Check if anyone dis/connected anything
@@ -311,7 +307,16 @@ void svm_control_loop() {
 
     send_state_to_simulator();
 
-    adcReadChannels(channel_data);
+    adcReadChannels(adc_raw_voltages);
+
+    // Now convert and store them into globals
+    I_Aa = 2 * (adc_raw_voltages[2] - 1.65);
+    I_Bb = 2 * (adc_raw_voltages[1] - 1.65);
+    I_Cc = 2 * (adc_raw_voltages[0] - 1.65);
+
+    V_an = 3 * adc_raw_voltages[5];
+    V_bn = 3 * adc_raw_voltages[4];
+    V_cn = 3 * adc_raw_voltages[3];
 }
 
 void ADC0SS2_IRQHandler(void) {

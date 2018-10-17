@@ -63,7 +63,7 @@ class LivePlotWidget(QtGui.QWidget):
     def initUI(self, n_plots, legends, x_axis, y_axis):
         self.ui_init = True
         self.n_plots = n_plots
-        self.buffer_size = 10
+        self.buffer_size = 100
         self.curves = []
         self.legends = legends
         self.x_axis = x_axis
@@ -167,7 +167,6 @@ class SerialReader(QObject):
     @pyqtSlot()
     def run(self):
         while True:
-            time.sleep(0.01)
             if self.serial_port is not None:
                 self.serial_port.read_until(b'\x41\x61')
 
