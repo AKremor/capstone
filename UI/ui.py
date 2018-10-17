@@ -4,12 +4,13 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QVBoxLayout
 import pyqtgraph as pg
 import time
+import pdb
 import numpy as np
 import collections
 import math
 from pyqtgraph.Qt import QtGui, QtCore
 import serial
-
+import traceback
 import design
 
 import sys
@@ -24,12 +25,9 @@ class LiveFFTWidget(QtGui.QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateplot)
         self.timer.start(100)
-        QtGui.QWidget.__init__(self)
 
     def initUI(self):
         self.buffer_size = 1000
-        self.timewindow = 10
-
         self.fft_data = np.zeros(self.buffer_size, dtype=np.float)
         self.freq_vect = np.zeros(self.buffer_size, dtype=np.float)
 
@@ -53,27 +51,25 @@ class LiveFFTWidget(QtGui.QWidget):
 class LivePlotWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super(LivePlotWidget, self).__init__(parent)
-
+        self.n_plots = 0
         self.givedata_buffer = None
 
+        self.ui_init = False
         # QTimer
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateplot)
         self.timer.start(100)
 
     def initUI(self, n_plots, legends, x_axis, y_axis):
-        self.buffer_size = 100
-        self.curves = [None] * n_plots
+        self.ui_init = True
+        self.n_plots = n_plots
+        self.buffer_size = 10
+        self.curves = []
         self.legends = legends
         self.x_axis = x_axis
         self.y_axis = y_axis
-        self.n_plots = n_plots
-        self.timewindow = 10
-        self.prev_time = time.time() * 1000
-        #self.x = collections.deque([0.0]*self.buffer_size, self.buffer_size)
         self.x = np.linspace(-10,0,self.buffer_size)
-        self.y = [collections.deque([0.0]*self.buffer_size, self.buffer_size)] * n_plots
-        self.databuffer = [collections.deque([0.0]*self.buffer_size, self.buffer_size)] * n_plots
+        self.databuffer = collections.deque([(0.0,) * n_plots]*self.buffer_size, self.buffer_size)
         self.givedata_buffer = None
 
         self.layout = QVBoxLayout(self)
@@ -82,24 +78,29 @@ class LivePlotWidget(QtGui.QWidget):
         self.plotter.addLegend()
         self.plotter.setLabel('left', *self.y_axis)
         self.plotter.setLabel('bottom', *self.x_axis)
-        colours = [(255, 255, 255), (255, 0, 0), (0, 255, 0)]
+        self.colours = [(255, 255, 255), (255, 0, 0), (0, 255, 0)]
         for i in range(self.n_plots):
-            self.curves[i] = self.plotter.plot(self.x, self.y[i], pen=colours[i], name=legends[i])
+            self.curves.append(self.plotter.plot(self.x, [x[i] for x in self.databuffer], pen=self.colours[i], name=legends[i]))
         self.layout.addWidget(self.plotter)
 
     def updateplot(self):
 
+        if self.ui_init is False:
+            print("WARNING UNINIT UI")
         if self.givedata_buffer is None:
             return
 
         for i in range(self.n_plots):
-            self.databuffer[i].append(self.givedata_buffer[i])
-            self.curves[i].setData(self.x, self.databuffer[i])
+            self.databuffer.append(self.givedata_buffer)
+            self.curves[i].setData(self.x, [x[i] for x in self.databuffer])
 
-    # TODO How to make this responsive to number of things?
     @QtCore.pyqtSlot(float, float, float)
     def take_sample(self, a, b, c):
-        self.givedata_buffer = [a, b, c]
+        self.givedata_buffer = (a, b, c)
+
+    @QtCore.pyqtSlot(float, float)
+    def take_sample_dq(self, a, b):
+        self.givedata_buffer = (a, b)
 
 
 class SerialWriter(QObject):
@@ -138,16 +139,16 @@ class SerialWriter(QObject):
 
 class SerialReader(QObject):
 
-    ref_voltage_dq_signal = pyqtSignal(float, float, float, name='ref_voltage_dq')
-    ref_current_dq_signal = pyqtSignal(float, float, float, name='ref_current_dq')
+    ref_voltage_dq_signal = pyqtSignal(float, float, name='ref_voltage_dq')
+    ref_current_dq_signal = pyqtSignal(float, float, name='ref_current_dq')
 
-    error_voltage_dq_signal = pyqtSignal(float, float, float, name='error_voltage_dq')
-    error_current_dq_signal = pyqtSignal(float, float, float, name='error_current_dq')
+    error_voltage_dq_signal = pyqtSignal(float, float, name='error_voltage_dq')
+    error_current_dq_signal = pyqtSignal(float, float, name='error_current_dq')
 
     sensed_current_abc_signal = pyqtSignal(float, float, float, name='sensed_current_abc')
-    sensed_current_dq_signal = pyqtSignal(float, float, float, name='sensed_current_dq')
+    sensed_current_dq_signal = pyqtSignal(float, float, name='sensed_current_dq')
     sensed_voltage_abc_signal = pyqtSignal(float, float, float, name='sensed_voltage_abc')
-    sensed_voltage_dq_signal = pyqtSignal(float, float, float, name='sensed_voltage_dq')
+    sensed_voltage_dq_signal = pyqtSignal(float, float, name='sensed_voltage_dq')
 
     sensed_voltage_fft_signal = pyqtSignal(object, object, name='sensed_voltage_fft')
     sensed_current_fft_signal = pyqtSignal(object, object, name='sensed_current_fft')
@@ -157,7 +158,7 @@ class SerialReader(QObject):
     level_1_detect_signal = pyqtSignal(bool, name='level_1_detect')
 
     def __init__(self, serial_port, buffer_size = 1000):
-        super().__init__()2e
+        super().__init__()
         self.buffer_size = buffer_size
         self.sensed_voltage_sample_buffer = collections.deque([0.0] * self.buffer_size, self.buffer_size)
         self.sensed_current_sample_buffer = collections.deque([0.0] * self.buffer_size, self.buffer_size)
@@ -173,10 +174,13 @@ class SerialReader(QObject):
                 # We have now achieved sync
                 # Make next char include size
                 length = int.from_bytes(self.serial_port.read(1), byteorder='little')
-                data = unpack('ffffffffff', self.serial_port.read(length))
-
-                # print("Read {} bytes".format(len(data)))
-                # print(data)
+                bytes_read = self.serial_port.read(length)
+                # print("Read {} bytes".format(len(bytes_read)))
+                #print(bytes_read)
+                try:
+                    data = unpack('ffffffffffbbb', bytes_read)
+                except:
+                    continue
 
                 Id_ref = data[0]
                 Iq_ref = data[1]
@@ -188,6 +192,11 @@ class SerialReader(QObject):
                 V_cn = data[7]
                 Id_error = data[8]
                 Iq_error = data[9]
+
+                I_d = 1 # TODO
+                I_q = 0 # TODO These are sensed current
+                V_d = 1 # TODO
+                V_q = 0 # TODO These are sensed voltage
 
                 level_9_detect = data[10]
                 level_3_detect = data[11]
@@ -225,9 +234,10 @@ class SerialReader(QObject):
             self.sensed_current_abc_signal.emit(I_Aa, I_Bb, I_Cc)
             self.sensed_voltage_abc_signal.emit(V_an, V_bn, V_cn)
 
-            # TODO Seem faulty?
-            #self.sensed_current_dq_signal.emit(I_d, I_q, 0)
-            #self.sensed_voltage_dq_signal.emit(V_d, V_q, 0)
+            self.ref_voltage_dq_signal.emit(Id_ref, Iq_ref)
+
+            self.sensed_current_dq_signal.emit(I_d, I_q)
+            self.sensed_voltage_dq_signal.emit(V_d, V_q)
 
             self.sensed_voltage_fft_signal.emit(freq_vect, voltage_fft_data)
             self.sensed_current_fft_signal.emit(freq_vect, current_fft_data)
@@ -247,7 +257,7 @@ class InverterApp(QtGui.QMainWindow, design.Ui_MainWindow):
         super(self.__class__, self).__init__()
         self.setupUi(self)
 
-        serial_port = None  # serial.Serial('COM9', 921600)
+        serial_port = serial.Serial('COM11', 921600)
 
         self.serial_write_worker = SerialWriter(serial_port)
         self.serial_write_thread = QThread()
@@ -260,16 +270,16 @@ class InverterApp(QtGui.QMainWindow, design.Ui_MainWindow):
         self.serial_read_worker.moveToThread(self.serial_read_thread)
         self.serial_read_thread.started.connect(self.serial_read_worker.run)
 
-        self.serial_read_worker.ref_voltage_dq_signal.connect(self.ref_voltage_dq.take_sample)
-        self.serial_read_worker.ref_current_dq_signal.connect(self.ref_current_dq.take_sample)
+        self.serial_read_worker.ref_voltage_dq_signal.connect(self.ref_voltage_dq.take_sample_dq)
+        self.serial_read_worker.ref_current_dq_signal.connect(self.ref_current_dq.take_sample_dq)
 
-        self.serial_read_worker.error_voltage_dq_signal.connect(self.error_voltage_dq.take_sample)
-        self.serial_read_worker.error_current_dq_signal.connect(self.error_current_dq.take_sample)
+        self.serial_read_worker.error_voltage_dq_signal.connect(self.error_voltage_dq.take_sample_dq)
+        self.serial_read_worker.error_current_dq_signal.connect(self.error_current_dq.take_sample_dq)
 
         self.serial_read_worker.sensed_current_abc_signal.connect(self.sensed_current_abc.take_sample)
-        self.serial_read_worker.sensed_current_dq_signal.connect(self.sensed_current_dq.take_sample)
+        self.serial_read_worker.sensed_current_dq_signal.connect(self.sensed_current_dq.take_sample_dq)
         self.serial_read_worker.sensed_voltage_abc_signal.connect(self.sensed_voltage_abc.take_sample)
-        self.serial_read_worker.sensed_voltage_dq_signal.connect(self.sensed_voltage_dq.take_sample)
+        self.serial_read_worker.sensed_voltage_dq_signal.connect(self.sensed_voltage_dq.take_sample_dq)
 
         self.serial_read_worker.sensed_voltage_fft_signal.connect(self.sensed_voltage_fft.take_sample)
         self.serial_read_worker.sensed_current_fft_signal.connect(self.sensed_current_fft.take_sample)

@@ -136,7 +136,7 @@ void mainThread(void* arg0) {
     init_hbridge_io();
     init_adc();
 
-    while (1) {
+    while (0) {
         adcReadChannels(channel_data);
     }
     init_timers();
