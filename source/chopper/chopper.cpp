@@ -15,15 +15,15 @@ void start_chopper() {
     while (!MAP_SysCtlPeripheralReady(chopper_gpio_peripheral))
         ;
 
-    // TODO(akremor): Abstract these out somehow
     MAP_GPIOPinConfigure(GPIO_PF0_M0PWM0);
     MAP_GPIOPinConfigure(GPIO_PF1_M0PWM1);
     MAP_GPIOPinTypePWM(chopper_gpio_port_base,
                        (chopper_gpio_pin_ac_pos | chopper_gpio_pin_ac_neg));
 
     /* Configure the PWM0 to count up/down without synchronization. */
-    MAP_PWMGenConfigure(chopper_pwm_base, PWM_GEN_0,
-                        PWM_GEN_MODE_UP_DOWN | PWM_GEN_MODE_NO_SYNC);
+    MAP_PWMGenConfigure(
+        chopper_pwm_base, PWM_GEN_0,
+        PWM_GEN_MODE_DBG_RUN | PWM_GEN_MODE_UP_DOWN | PWM_GEN_MODE_NO_SYNC);
     update_frequency(chopper_hz);
 }
 

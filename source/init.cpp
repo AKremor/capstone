@@ -10,10 +10,46 @@
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 #include "arm_math.h"
 
+/*
+
+FIR filter designed with
+http://t-filter.appspot.com
+
+sampling frequency: 20000 Hz
+
+* 0 Hz - 1000 Hz
+  gain = 1
+  desired ripple = 5 dB
+  actual ripple = 3.666895709039203 dB
+
+* 2000 Hz - 10000 Hz
+  gain = 0
+  desired attenuation = -40 dB
+  actual attenuation = -41.09174091632818 dB
+
+*/
+
+#define FILTER_TAP_NUM 27
+
+static float32_t filter_taps[FILTER_TAP_NUM] = {
+    -0.007775715121256268, -0.007938974136595613, -0.009534265788246128,
+    -0.008779578259641298, -0.004381884421750879, 0.004666131585205163,
+    0.0188044731228937,    0.03764144706001848,   0.05992101812383003,
+    0.08357444021744635,   0.10601855702701225,   0.12454015906119098,
+    0.13674393462068657,   0.14100385434561774,   0.13674393462068657,
+    0.12454015906119098,   0.10601855702701225,   0.08357444021744635,
+    0.05992101812383003,   0.03764144706001848,   0.0188044731228937,
+    0.004666131585205163,  -0.004381884421750879, -0.008779578259641298,
+    -0.009534265788246128, -0.007938974136595613, -0.007775715121256268};
+
 static uint64_t system_time_us = 0;
 
 arm_pid_instance_f32 PID_d;
 arm_pid_instance_f32 PID_q;
+
+arm_fir_instance_f32 FIR_IAa;
+arm_fir_instance_f32 FIR_IBb;
+arm_fir_instance_f32 FIR_ICc;
 
 uint16_t adc_s1_fire = 0;
 uint16_t adc_s2_fire = 0;
@@ -26,6 +62,7 @@ float adc_raw_voltages[6];
 
 SystemState* state = SystemState::get();
 PhaseVoltageLevel duty_levels[3] = {0, 0, 0};
+uint32_t levels_all[3] = {0, 0, 0};
 float32_t duty_cycles[3] = {0.5, 0.25, 0.25};
 
 float32_t prev_adc[3] = {0, 0, 0};
@@ -131,13 +168,17 @@ void init_timers() {
     MAP_IntEnable(INT_TIMER3A);
     MAP_TimerEnable(TIMER3_BASE, TIMER_A);
 
-    MAP_TimerConfigure(TIMER4_BASE, TIMER_CFG_A_ONE_SHOT);
-    MAP_TimerPrescaleSet(TIMER4_BASE, TIMER_A, 120);
-    MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, 65000);
-    MAP_TimerADCEventSet(TIMER4_BASE, TIMER_ADC_TIMEOUT_A);
-    MAP_TimerControlTrigger(TIMER4_BASE, TIMER_A, true);
-    MAP_TimerEnable(TIMER4_BASE, TIMER_A);
+    // MAP_TimerConfigure(TIMER4_BASE, TIMER_CFG_A_ONE_SHOT);
+    // MAP_TimerPrescaleSet(TIMER4_BASE, TIMER_A, 120);
+    // MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, 65000);
+    // MAP_TimerADCEventSet(TIMER4_BASE, TIMER_ADC_TIMEOUT_A);
+    // MAP_TimerControlTrigger(TIMER4_BASE, TIMER_A, true);
+    // MAP_TimerEnable(TIMER4_BASE, TIMER_A);
 }
+
+float32_t state_IAa[FILTER_TAP_NUM];
+float32_t state_IBb[FILTER_TAP_NUM];
+float32_t state_ICc[FILTER_TAP_NUM];
 
 void mainThread(void* arg0) {
     PID_d.Kd = Kd;
@@ -149,10 +190,27 @@ void mainThread(void* arg0) {
     PID_q.Kp = Kp;
     arm_pid_init_f32(&PID_q, 1);
 
+    arm_fir_init_f32(&FIR_IAa, FILTER_TAP_NUM, filter_taps, state_IAa, 1);
+    arm_fir_init_f32(&FIR_IBb, FILTER_TAP_NUM, filter_taps, state_IBb, 1);
+    arm_fir_init_f32(&FIR_ICc, FILTER_TAP_NUM, filter_taps, state_ICc, 1);
+
     start_chopper();
     init_hil();
     init_hbridge_io();
-    //init_adc();
+    init_adc();
+
+    while (0) {
+        for (int i = 0; i < n_levels; i++) {
+            uint32_t lev = svm_phase_levels_a[i] | svm_phase_levels_b[i] |
+                           svm_phase_levels_c[i];
+
+            MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, lev >> 0 & 0xFF);
+            MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, lev >> 8 & 0xFF);
+            MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, lev >> 16 & 0xFF);
+            SysCtlDelay(120E6 * 0.001);
+        }
+    }
+
     init_timers();
 
     while (1) {
@@ -164,15 +222,10 @@ void TIMER0A_IRQHandler(void) {
     MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1, GPIO_PIN_1);
 
-    PhaseVoltageLevel levels = duty_levels[0];
-    uint32_t levels_all = svm_phase_levels_a[levels.a] |
-                          svm_phase_levels_b[levels.b] |
-                          svm_phase_levels_c[levels.c];
-
     // Set the 1V levels, they are located [7:0]
-    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, levels_all >> 0 & 0xFF);
-    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, levels_all >> 8 & 0xFF);
-    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, levels_all >> 16 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, levels_all[0] >> 0 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, levels_all[0] >> 8 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, levels_all[0] >> 16 & 0xFF);
 
     MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, adc_s1_fire);
     MAP_TimerEnable(TIMER4_BASE, TIMER_A);
@@ -185,15 +238,10 @@ void TIMER1A_IRQHandler(void) {
     MAP_TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_2, GPIO_PIN_2);
 
-    PhaseVoltageLevel levels = duty_levels[1];
-    uint32_t levels_all = svm_phase_levels_a[levels.a] |
-                          svm_phase_levels_b[levels.b] |
-                          svm_phase_levels_c[levels.c];
-
     // Set the 1V levels, they are located [7:0]
-    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, levels_all >> 0 & 0xFF);
-    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, levels_all >> 8 & 0xFF);
-    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, levels_all >> 16 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, levels_all[1] >> 0 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, levels_all[1] >> 8 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, levels_all[1] >> 16 & 0xFF);
 
     MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, adc_s2_fire);
     MAP_TimerEnable(TIMER4_BASE, TIMER_A);
@@ -206,15 +254,10 @@ void TIMER2A_IRQHandler(void) {
     MAP_TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
     MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_3, GPIO_PIN_3);
 
-    PhaseVoltageLevel levels = duty_levels[2];
-    uint32_t levels_all = svm_phase_levels_a[levels.a] |
-                          svm_phase_levels_b[levels.b] |
-                          svm_phase_levels_c[levels.c];
-
     // Set the 1V levels, they are located [7:0]
-    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, levels_all >> 0 & 0xFF);
-    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, levels_all >> 8 & 0xFF);
-    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, levels_all >> 16 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTL_BASE, 0xFF, levels_all[2] >> 0 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTK_BASE, 0xFF, levels_all[2] >> 8 & 0xFF);
+    MAP_GPIOPinWrite(GPIO_PORTA_BASE, 0xFF, levels_all[2] >> 16 & 0xFF);
 
     MAP_TimerLoadSet(TIMER4_BASE, TIMER_A, adc_s3_fire);
     MAP_TimerEnable(TIMER4_BASE, TIMER_A);
@@ -243,9 +286,6 @@ void svm_control_loop() {
     arm_sin_cos_f32(360 * fundamental_frequency_hz * system_time_us * 1E-6,
                     &sinVal, &cosVal);
 
-    // Bias current readings appropriately
-    // TODO Filter currents
-
     volatile float32_t Id = Id_ref;
     volatile float32_t Iq = Iq_ref;
 
@@ -272,9 +312,17 @@ void svm_control_loop() {
     svm_modulator(Idcontrol, Iqcontrol, sinVal, cosVal, duty_levels,
                   duty_cycles);
 
-    state->duty_levels[0] = duty_levels[0];
-    state->duty_levels[1] = duty_levels[1];
-    state->duty_levels[2] = duty_levels[2];
+    levels_all[0] = svm_phase_levels_a[duty_levels[0].a] |
+                    svm_phase_levels_b[duty_levels[0].b] |
+                    svm_phase_levels_c[duty_levels[0].c];
+
+    levels_all[1] = svm_phase_levels_a[duty_levels[1].a] |
+                    svm_phase_levels_b[duty_levels[1].b] |
+                    svm_phase_levels_c[duty_levels[1].c];
+
+    levels_all[2] = svm_phase_levels_a[duty_levels[2].a] |
+                    svm_phase_levels_b[duty_levels[2].b] |
+                    svm_phase_levels_c[duty_levels[2].c];
 
     state->duty_cycles[0] = duty_cycles[0];
     state->duty_cycles[1] = duty_cycles[1];
@@ -302,12 +350,16 @@ void svm_control_loop() {
     }
     send_state_to_simulator();
 
-    //adcReadChannels(adc_raw_voltages);
+    adcReadChannels(adc_raw_voltages);
 
     // Now convert and store them into globals
-    I_Aa = 2 * (adc_raw_voltages[2] - 1.65);
-    I_Bb = 2 * (adc_raw_voltages[1] - 1.65);
-    I_Cc = 2 * (adc_raw_voltages[0] - 1.65);
+    float32_t I_Aa_t = 2 * (adc_raw_voltages[2] - 1.65);
+    float32_t I_Bb_t = 2 * (adc_raw_voltages[1] - 1.65);
+    float32_t I_Cc_t = 2 * (adc_raw_voltages[0] - 1.65);
+
+    arm_fir_f32(&FIR_IAa, &I_Aa_t, &I_Aa, 1);
+    arm_fir_f32(&FIR_IBb, &I_Bb_t, &I_Bb, 1);
+    arm_fir_f32(&FIR_ICc, &I_Cc_t, &I_Cc, 1);
 
     V_an = 3 * adc_raw_voltages[5];
     V_bn = 3 * adc_raw_voltages[4];
@@ -316,22 +368,4 @@ void svm_control_loop() {
     receive_uart();
 }
 
-void ADC0SS2_IRQHandler(void) {
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
-
-    uint32_t adc_digital_value[3];
-
-    /*current_history[current_history_index][0] =
-        2 * (convertAdjustedSingle(adc_digital_value[0]) - 1.6f);
-    current_history[current_history_index][1] =
-        2 * (convertAdjustedSingle(adc_digital_value[1]) - 1.6f);
-    current_history[current_history_index][2] =
-        2 * (convertAdjustedSingle(adc_digital_value[2]) - 1.6f);
-        */
-
-    // TODO
-
-    current_history_index = (current_history_index + 1) % 3;
-
-    MAP_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, 0);
-}
+// void ADC0SS2_IRQHandler(void) {}
