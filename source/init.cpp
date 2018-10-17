@@ -22,6 +22,8 @@ uint16_t adc_s3_fire = 0;
 float I_Aa, I_Bb, I_Cc;
 float V_an, V_bn, V_cn;
 
+float channel_data[8];
+
 void init_hbridge_io() {
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
     while (!(MAP_SysCtlPeripheralReady(SYSCTL_PERIPH_GPIOL)))
@@ -133,6 +135,10 @@ void mainThread(void* arg0) {
     init_hil();
     init_hbridge_io();
     init_adc();
+
+    while (1) {
+        adcReadChannels(channel_data);
+    }
     init_timers();
 
     while (1) {
@@ -304,9 +310,8 @@ void svm_control_loop() {
     MAP_TimerEnable(TIMER2_BASE, TIMER_A);
 
     send_state_to_simulator();
-    float channel_data[8];
 
-    // adcReadChannels(channel_data);
+    adcReadChannels(channel_data);
 }
 
 void ADC0SS2_IRQHandler(void) {

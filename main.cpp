@@ -1,7 +1,10 @@
 #include <stdint.h>
+#include <ti/devices/msp432e4/driverlib/debug.h>
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
 
 extern void mainThread(void *arg0);
+
+void __error__(char *pcFilename, uint32_t ui32Line) { asm("bkpt\n\r"); }
 
 uint32_t system_clock_hz;
 

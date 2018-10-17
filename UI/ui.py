@@ -157,7 +157,7 @@ class SerialReader(QObject):
     level_1_detect_signal = pyqtSignal(bool, name='level_1_detect')
 
     def __init__(self, serial_port, buffer_size = 1000):
-        super().__init__()
+        super().__init__()2e
         self.buffer_size = buffer_size
         self.sensed_voltage_sample_buffer = collections.deque([0.0] * self.buffer_size, self.buffer_size)
         self.sensed_current_sample_buffer = collections.deque([0.0] * self.buffer_size, self.buffer_size)
